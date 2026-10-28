@@ -248,7 +248,6 @@ async function saveSubject() {
     }
 }
 
-// تم إزالة رسالة التأكيد (confirm) تماماً لتتم عملية الحذف بسلاسة فورية بدون رسائل مزعجة
 async function deleteSubject(e, id) {
     e.stopPropagation();
     try {
@@ -289,7 +288,10 @@ async function saveLectureData() {
     const videoInput = document.getElementById('lecture-videos');
     const fileInput = document.getElementById('lecture-files');
 
-    if (!title) return;
+    if (!title) {
+        alert('من فضلك اكتب عنوان المحاضرة');
+        return;
+    }
 
     const lectureId = String(Date.now());
     let imagesData = [];
@@ -332,6 +334,7 @@ async function saveLectureData() {
                     renderLectures();
                 } catch (e) {
                     console.log("Error saving lecture", e);
+                    alert('حدث خطأ أثناء الحفظ، تأكد من اتصال الإنترنت');
                 }
             });
         });
@@ -712,7 +715,6 @@ function closeModal(id) {
     if (m) m.style.display = 'none'; 
 }
 
-// ربط النطاق العام لجميع الدوال لتستجيب الأزرار فوراً
 window.showPage = showPage;
 window.toggleTheme = toggleTheme;
 window.handleAuth = handleAuth;
@@ -741,3 +743,9 @@ window.deleteQuiz = deleteQuiz;
 window.openStudentNameModal = openStudentNameModal;
 window.startQuizWithStudentName = startQuizWithStudentName;
 window.submitQuizAnswers = submitQuizAnswers;
+
+    const saveLectureBtn = document.querySelector('#lecture-modal .btn-submit');
+    if (saveLectureBtn) {
+        saveLectureBtn.addEventListener('click', saveLectureData);
+    }
+    window.saveLectureData = saveLectureData;
