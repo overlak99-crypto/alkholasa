@@ -1,5 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getFirestore, collection, getDocs, deleteDoc, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDZAkAzFsmwPYgTBefkr6Cdz5ZZBrEHwWo",
@@ -13,6 +14,7 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+const storage = getStorage(app);
 
 let currentUser = null;
 let currentTrack = 'انتظام';
@@ -62,7 +64,7 @@ async function loadDataFromCloud() {
         quizzes = [];
         quizSnap.forEach(doc => { quizzes.push({ id: doc.id, ...doc.data() }); });
     } catch (e) {
-        console.log("Cloud sync note:", e);
+        console.error("Cloud sync error:", e);
     }
 }
 
@@ -191,6 +193,21 @@ function timeAgo(timestamp) {
     return 'منذ ' + days + ' يوم';
 }
 
+// زرار "تحديث الموقع الآن" (كان ناقص ومش معرّف)
+async function triggerUpdateProcess() {
+    const banner = document.getElementById('update-progress-banner');
+    const fill = document.getElementById('progress-bar-fill');
+    if (banner) banner.style.display = 'block';
+    if (fill) fill.style.width = '30%';
+    await loadDataFromCloud();
+    if (fill) fill.style.width = '100%';
+    updateStats();
+    setTimeout(function() {
+        if (banner) banner.style.display = 'none';
+        if (fill) fill.style.width = '0%';
+    }, 800);
+}
+
 function renderSubjects(track) {
     currentTrack = track;
     const grid = document.getElementById(track === 'انتظام' ? 'antizam-grid' : 'antisab-grid');
@@ -244,7 +261,8 @@ async function saveSubject() {
         await loadDataFromCloud();
         renderSubjects(currentTrack);
     } catch (e) {
-        console.log("Error saving subject", e);
+        console.error("Error saving subject", e);
+        alert('حدث خطأ أثناء حفظ المادة: ' + e.message);
     }
 }
 
@@ -255,7 +273,7 @@ async function deleteSubject(e, id) {
         await loadDataFromCloud();
         renderSubjects(currentTrack);
     } catch (e) {
-        console.log("Error deleting subject", e);
+        console.error("Error deleting subject", e);
     }
 }
 
@@ -282,63 +300,67 @@ function openAddLectureModal() {
     document.getElementById('lecture-modal').style.display = 'flex';
 }
 
-async function saveLectureData() {
-    const title = document.getElementById('new-lecture-title').value.trim();
-    const imageInput = document.getElementById('lecture-images');
-    const videoInput = document.getElementById('lecture-videos');
-    const fileInput = document.getElementById('lecture-files');
+// رفع الملفات على Firebase Storage وإرجاع الروابط
+async function uploadFiles(files, folder, lectureId) {
+    const result = [];
+    for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const fileRef = ref(storage, 'lectures/' + lectureId + '/' + folder + '/' + Date.now() + '_' + file.name);
+        await uploadBytes(fileRef, file);
+        const url = await getDownloadURL(fileRef);
+        result.push({ name: file.name, data: url });
+    }
+    return result;
+}
 
+let isSavingLecture = false;
+
+async function saveLectureData() {
+    if (isSavingLecture) return;
+
+    const title = document.getElementById('new-lecture-title').value.trim();
     if (!title) {
         alert('من فضلك اكتب عنوان المحاضرة');
         return;
     }
 
-    const lectureId = String(Date.now());
-    let imagesData = [];
-    let videosData = [];
-    let filesData = [];
-
-    function processFiles(files, targetArray, callback) {
-        if (!files || files.length === 0) {
-            callback();
-            return;
-        }
-        let processed = 0;
-        for (let i = 0; i < files.length; i++) {
-            const file = files[i];
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                targetArray.push({ name: file.name, data: e.target.result });
-                processed++;
-                if (processed === files.length) callback();
-            };
-            reader.readAsDataURL(file);
-        }
+    const btn = document.getElementById('saveLectureBtn');
+    isSavingLecture = true;
+    if (btn) {
+        btn.disabled = true;
+        btn.innerText = 'جاري الرفع... لا تغلق الصفحة';
     }
 
-    processFiles(imageInput.files, imagesData, function() {
-        processFiles(videoInput.files, videosData, function() {
-            processFiles(fileInput.files, filesData, async function() {
-                const newLecture = {
-                    subjectId: String(currentSubjectId),
-                    title: title,
-                    images: imagesData,
-                    videos: videosData,
-                    files: filesData,
-                    createdAt: Date.now()
-                };
-                try {
-                    await setDoc(doc(db, "lectures", lectureId), newLecture);
-                    closeModal('lecture-modal');
-                    await loadDataFromCloud();
-                    renderLectures();
-                } catch (e) {
-                    console.log("Error saving lecture", e);
-                    alert('حدث خطأ أثناء الحفظ، تأكد من اتصال الإنترنت');
-                }
-            });
+    const lectureId = String(Date.now());
+
+    try {
+        const images = await uploadFiles(document.getElementById('lecture-images').files, 'images', lectureId);
+        const videos = await uploadFiles(document.getElementById('lecture-videos').files, 'videos', lectureId);
+        const files = await uploadFiles(document.getElementById('lecture-files').files, 'files', lectureId);
+
+        await setDoc(doc(db, "lectures", lectureId), {
+            subjectId: String(currentSubjectId),
+            title: title,
+            images: images,
+            videos: videos,
+            files: files,
+            createdAt: Date.now()
         });
-    });
+
+        closeModal('lecture-modal');
+        await loadDataFromCloud();
+        renderLectures();
+        updateStats();
+    } catch (e) {
+        console.error("Error saving lecture", e);
+        alert('حدث خطأ أثناء الحفظ: ' + e.message);
+    } finally {
+        isSavingLecture = false;
+        if (btn) {
+            btn.disabled = false;
+            btn.innerText = 'حفظ ونشر المحاضرة';
+        }
+    }
 }
 
 function renderLectures() {
@@ -376,8 +398,9 @@ async function deleteLecture(e, id) {
         await deleteDoc(doc(db, "lectures", String(id)));
         await loadDataFromCloud();
         renderLectures();
+        updateStats();
     } catch (e) {
-        console.log("Error deleting lecture", e);
+        console.error("Error deleting lecture", e);
     }
 }
 
@@ -531,7 +554,7 @@ function addQuestionField() {
     builderQuestions.push(qBox);
 }
 
-function saveQuizData() {
+async function saveQuizData() {
     const title = document.getElementById('quiz-title-input').value.trim();
     const type = document.getElementById('quiz-type-select').value;
     const imgInput = document.getElementById('quiz-image-input');
@@ -572,27 +595,24 @@ function saveQuizData() {
     if (questions.length === 0) return;
 
     const quizId = String(Date.now());
-    
-    async function finishSave(imageData) {
-        const newQuiz = { title: title, type: type, image: imageData, questions: questions, createdAt: Date.now() };
-        try {
-            await setDoc(doc(db, "quizzes", quizId), newQuiz);
-            closeModal('quiz-modal');
-            await loadDataFromCloud();
-            renderQuizzes();
-        } catch (e) {
-            console.log("Error saving quiz", e);
-        }
-    }
 
-    if (imgInput && imgInput.files.length > 0) {
-        const reader = new FileReader();
-        reader.onload = async function(e) {
-            await finishSave(e.target.result);
-        };
-        reader.readAsDataURL(imgInput.files[0]);
-    } else {
-        finishSave(null);
+    try {
+        let imageUrl = null;
+        if (imgInput && imgInput.files.length > 0) {
+            const file = imgInput.files[0];
+            const imgRef = ref(storage, 'quizzes/' + quizId + '/' + Date.now() + '_' + file.name);
+            await uploadBytes(imgRef, file);
+            imageUrl = await getDownloadURL(imgRef);
+        }
+
+        const newQuiz = { title: title, type: type, image: imageUrl, questions: questions, createdAt: Date.now() };
+        await setDoc(doc(db, "quizzes", quizId), newQuiz);
+        closeModal('quiz-modal');
+        await loadDataFromCloud();
+        renderQuizzes();
+    } catch (e) {
+        console.error("Error saving quiz", e);
+        alert('حدث خطأ أثناء حفظ الاختبار: ' + e.message);
     }
 }
 
@@ -603,7 +623,7 @@ async function deleteQuiz(e, id) {
         await loadDataFromCloud();
         renderQuizzes();
     } catch (e) {
-        console.log("Error deleting quiz", e);
+        console.error("Error deleting quiz", e);
     }
 }
 
@@ -743,16 +763,10 @@ window.deleteQuiz = deleteQuiz;
 window.openStudentNameModal = openStudentNameModal;
 window.startQuizWithStudentName = startQuizWithStudentName;
 window.submitQuizAnswers = submitQuizAnswers;
+window.triggerUpdateProcess = triggerUpdateProcess;
 
-// ربط زر الحفظ بطريقة سليمة ومضمونة
-document.addEventListener('DOMContentLoaded', () => {
-    const saveBtn = document.getElementById('saveLectureBtn') || document.querySelector('#lecture-modal .btn-submit');
-    if (saveBtn) {
-        // نلغي أي ربط قديم ونحط الجديد
-        saveBtn.replaceWith(saveBtn.cloneNode(true));
-        const newSaveBtn = document.getElementById('saveLectureBtn') || document.querySelector('#lecture-modal .btn-submit');
-        if (newSaveBtn) {
-            newSaveBtn.addEventListener('click', saveLectureData);
-        }
-    }
-});
+// ربط زرار حفظ المحاضرة (مرة واحدة فقط)
+const saveLectureBtnEl = document.getElementById('saveLectureBtn');
+if (saveLectureBtnEl) {
+    saveLectureBtnEl.addEventListener('click', saveLectureData);
+}
