@@ -748,4 +748,6 @@ window.submitQuizAnswers = submitQuizAnswers;
     if (saveLectureBtn) {
         saveLectureBtn.addEventListener('click', saveLectureData);
     }
-    window.saveLectureData = saveLectureData;
+
+window.saveLectureData = saveLectureData;
+document.getElementById('saveLectureBtn').addEventListener('click', saveLectureData);
