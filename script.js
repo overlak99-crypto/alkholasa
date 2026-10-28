@@ -484,14 +484,62 @@ function viewMedia(type, index, mediaType) {
     body.innerHTML = '';
 
     if (type === 'image') {
-        body.innerHTML = '<img src="' + item.data + '" alt="' + item.name + '" style="width:100%; max-height:70vh; object-fit:contain; border-radius:8px;">';
+        body.innerHTML = '<img src="' + item.data + '" alt="' + item.name + '" draggable="false" style="width:100%; max-height:70vh; object-fit:contain; border-radius:8px; pointer-events:none;">';
     } else if (type === 'video') {
-        body.innerHTML = '<video controls autoplay src="' + item.data + '" style="width:100%; max-height:70vh; border-radius:8px;"></video>';
+        body.innerHTML = '<video controls autoplay controlsList="nodownload noremoteplayback" disablePictureInPicture oncontextmenu="return false" src="' + item.data + '" style="width:100%; max-height:70vh; border-radius:8px;"></video>';
     } else if (type === 'pdf') {
-        body.innerHTML = '<iframe src="' + item.data + '" style="width:100%; height:65vh; border:none; border-radius:8px;"></iframe>';
+        showPdfAsImages(item, body);
     }
 
     modal.style.display = 'flex';
+}
+
+function showPdfAsImages(item, body) {
+    const url = item.data;
+    const email = currentUser ? currentUser.email : '';
+
+    // لو الملف مش PDF على Cloudinary، نعرضه بشكل عادي
+    if (!(url.indexOf('/image/upload/') !== -1 && /\.pdf($|\?)/i.test(url))) {
+        body.innerHTML = '<iframe src="' + url + '#toolbar=0&navpanes=0" style="width:100%; height:65vh; border:none; border-radius:8px;"></iframe>';
+        return;
+    }
+
+    const base = url.replace('/image/upload/', '/image/upload/pg_PAGE/').replace(/\.pdf($|\?.*)/i, '.jpg');
+
+    const wrapper = document.createElement('div');
+    wrapper.style.position = 'relative';
+    wrapper.style.userSelect = 'none';
+
+    const pages = document.createElement('div');
+    wrapper.appendChild(pages);
+
+    const safeEmail = email.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const svg = "<svg xmlns='http://www.w3.org/2000/svg' width='320' height='200'><text x='20' y='110' fill='rgba(120,120,120,0.28)' font-size='16' font-family='Arial' transform='rotate(-25 160 100)'>" + safeEmail + "</text></svg>";
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:absolute; inset:0; pointer-events:none; background-repeat:repeat; background-image:url("data:image/svg+xml,' + encodeURIComponent(svg) + '");';
+    wrapper.appendChild(overlay);
+
+    body.appendChild(wrapper);
+
+    let page = 1;
+    function loadNext() {
+        if (page > 150) return;
+        const img = new Image();
+        img.draggable = false;
+        img.style.cssText = 'width:100%; display:block; margin-bottom:8px; border-radius:6px; pointer-events:none;';
+        img.onload = function() {
+            pages.appendChild(img);
+            page++;
+            loadNext();
+        };
+        img.onerror = function() {
+            if (page === 1) {
+                pages.innerHTML = '<p style="padding:1rem;">تعذر عرض الملف</p>';
+            }
+        };
+        img.src = base.replace('PAGE', page);
+    }
+    loadNext();
 }
 
 function goBackToSubject() {
