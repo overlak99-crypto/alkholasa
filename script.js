@@ -744,10 +744,15 @@ window.openStudentNameModal = openStudentNameModal;
 window.startQuizWithStudentName = startQuizWithStudentName;
 window.submitQuizAnswers = submitQuizAnswers;
 
-    const saveLectureBtn = document.querySelector('#lecture-modal .btn-submit');
-    if (saveLectureBtn) {
-        saveLectureBtn.addEventListener('click', saveLectureData);
+// ربط زر الحفظ بطريقة سليمة ومضمونة
+document.addEventListener('DOMContentLoaded', () => {
+    const saveBtn = document.getElementById('saveLectureBtn') || document.querySelector('#lecture-modal .btn-submit');
+    if (saveBtn) {
+        // نلغي أي ربط قديم ونحط الجديد
+        saveBtn.replaceWith(saveBtn.cloneNode(true));
+        const newSaveBtn = document.getElementById('saveLectureBtn') || document.querySelector('#lecture-modal .btn-submit');
+        if (newSaveBtn) {
+            newSaveBtn.addEventListener('click', saveLectureData);
+        }
     }
-
-window.saveLectureData = saveLectureData;
-document.getElementById('saveLectureBtn').addEventListener('click', saveLectureData);
+});
