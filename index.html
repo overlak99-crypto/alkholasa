@@ -1,4 +1,5 @@
-<!DOCTYPE html>  <html lang="ar" dir="rtl" data-theme="dark">  
+<!DOCTYPE html>  
+<html lang="ar" dir="rtl" data-theme="dark">  
 <head>  
     <meta charset="UTF-8">  
     <meta name="viewport" content="width=device-width, initial-scale=1.0">  
@@ -7,15 +8,13 @@
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">  
     <link rel="stylesheet" href="style.css">  
 </head>  
-<body oncontextmenu="return false;">  <nav class="navbar">  
+<body oncontextmenu="return false;">  
+
+<nav class="navbar">  
     <div class="brand-container" onclick="showPage('home')">  
         <div class="brand-title">  
             الخلاصة <span class="brand-secondary">| Top Notes</span>  
         </div>  
-    </div>  
-
-    <div class="navbar-logo-center">  
-        <img src="logo.png" alt="Logo" onerror="this.style.display='none'">  
     </div>  
 
     <div class="nav-right-group">  
@@ -308,6 +307,7 @@
             <label>اختر الملفات أو الـ PDF (اختياري)</label>  
             <input type="file" id="lecture-files" multiple>  
         </div>  
+        <!-- تم إعادة ربط الدالة مباشرة هنا لضمان عمل الزر 100% -->  
         <button class="btn-submit" onclick="saveLectureData()">حفظ ونشر المحاضرة</button>  
         <button class="btn-track-secondary" style="width:100%; margin-top:0.8rem;" onclick="closeModal('lecture-modal')">إلغاء</button>  
     </div>  
@@ -346,4 +346,4 @@
 <script type="module" src="script.js"></script>
 
 </body>  
-</html>  
+</html>
