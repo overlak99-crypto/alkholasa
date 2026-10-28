@@ -1,6 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getFirestore, collection, getDocs, deleteDoc, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDZAkAzFsmwPYgTBefkr6Cdz5ZZBrEHwWo",
@@ -14,7 +13,6 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
-const storage = getStorage(app);
 
 let currentUser = null;
 let currentTrack = 'انتظام';
@@ -193,7 +191,7 @@ function timeAgo(timestamp) {
     return 'منذ ' + days + ' يوم';
 }
 
-// زرار "تحديث الموقع الآن" (كان ناقص ومش معرّف)
+// زرار "تحديث الموقع الآن"
 async function triggerUpdateProcess() {
     const banner = document.getElementById('update-progress-banner');
     const fill = document.getElementById('progress-bar-fill');
@@ -300,15 +298,28 @@ function openAddLectureModal() {
     document.getElementById('lecture-modal').style.display = 'flex';
 }
 
-// رفع الملفات على Firebase Storage وإرجاع الروابط
+// ===== إعدادات Cloudinary =====
+const CLOUD_NAME = 'flilvppv';
+const UPLOAD_PRESET = 'kholasa';
+
+async function uploadToCloudinary(file) {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('upload_preset', UPLOAD_PRESET);
+    const res = await fetch('https://api.cloudinary.com/v1_1/' + CLOUD_NAME + '/auto/upload', {
+        method: 'POST',
+        body: formData
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error ? data.error.message : 'فشل الرفع');
+    return data.secure_url;
+}
+
 async function uploadFiles(files, folder, lectureId) {
     const result = [];
     for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        const fileRef = ref(storage, 'lectures/' + lectureId + '/' + folder + '/' + Date.now() + '_' + file.name);
-        await uploadBytes(fileRef, file);
-        const url = await getDownloadURL(fileRef);
-        result.push({ name: file.name, data: url });
+        const url = await uploadToCloudinary(files[i]);
+        result.push({ name: files[i].name, data: url });
     }
     return result;
 }
@@ -599,10 +610,7 @@ async function saveQuizData() {
     try {
         let imageUrl = null;
         if (imgInput && imgInput.files.length > 0) {
-            const file = imgInput.files[0];
-            const imgRef = ref(storage, 'quizzes/' + quizId + '/' + Date.now() + '_' + file.name);
-            await uploadBytes(imgRef, file);
-            imageUrl = await getDownloadURL(imgRef);
+            imageUrl = await uploadToCloudinary(imgInput.files[0]);
         }
 
         const newQuiz = { title: title, type: type, image: imageUrl, questions: questions, createdAt: Date.now() };
