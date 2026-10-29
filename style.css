@@ -608,3 +608,115 @@ max-width: 100% !important;
 max-height: 85vh !important;
 object-fit: contain !important;
 }
+
+@media (max-width: 768px) {
+    html, body {
+        overflow-x: hidden;
+        max-width: 100%;
+    }
+
+    .navbar {
+        flex-direction: column !important;
+        align-items: center !important;
+        gap: 0.6rem;
+        padding: 0.7rem !important;
+        height: auto !important;
+    }
+
+    .nav-right-group {
+        flex-direction: column !important;
+        width: 100%;
+        gap: 0.6rem;
+    }
+
+    .nav-links {
+        display: flex !important;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 0.4rem;
+        width: 100%;
+        padding: 0 !important;
+        margin: 0 !important;
+        list-style: none;
+    }
+
+    .nav-btn {
+        padding: 0.4rem 0.7rem !important;
+        font-size: 0.85rem !important;
+    }
+
+    .nav-right-controls {
+        display: flex;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .container {
+        width: 100% !important;
+        max-width: 100% !important;
+        padding: 1rem !important;
+        margin: 0 auto !important;
+        box-sizing: border-box;
+    }
+
+    .hero-card {
+        padding: 1.2rem !important;
+    }
+
+    .hero-title {
+        font-size: 1.8rem !important;
+    }
+
+    .paths-grid,
+    .subjects-grid,
+    .contact-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    .login-card {
+        width: 92% !important;
+        max-width: 92% !important;
+    }
+}
+
+/* نافذة عرض الملفات: زرار الإغلاق دايماً ظاهر */
+#media-view-modal .login-card {
+    max-height: 92vh;
+    display: flex !important;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+#media-view-modal .login-card > div:first-child {
+    flex-shrink: 0;
+    gap: 0.8rem;
+    padding-bottom: 0.6rem;
+    border-bottom: 1px solid var(--card-border);
+}
+
+#media-modal-title {
+    min-width: 0;
+    flex: 1;
+    font-size: 0.95rem;
+    text-align: right;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+#media-view-modal .login-card > div:first-child button {
+    flex-shrink: 0;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background: var(--card-bg) !important;
+    border: 1px solid var(--card-border) !important;
+    font-size: 1.1rem;
+}
+
+#media-modal-body {
+    flex: 1;
+    min-height: 0;
+    max-height: none !important;
+    overflow-y: auto;
+}
