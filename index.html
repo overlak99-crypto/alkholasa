@@ -6,6 +6,7 @@
     <title>الخلاصة | Top Notes - كلية التجارة</title>  
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">  
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">  
+    <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">  
 </head>  
 <body oncontextmenu="return false;">  
@@ -13,17 +14,17 @@
 <nav class="navbar">  
     <div class="brand-container" onclick="showPage('home')">  
         <div class="brand-title">  
-            الخلاصة <span class="brand-secondary">| Top Notes</span>  
+            <i class="fa-solid fa-book-open brand-book"></i> الخلاصة <span class="brand-secondary">| Top Notes</span>  
         </div>  
     </div>  
 
     <div class="nav-right-group">  
         <ul class="nav-links">  
-            <li><button class="nav-btn active" onclick="showPage('home')">الرئيسية</button></li>  
-            <li><button class="nav-btn" onclick="showPage('antizam')">انتظام</button></li>  
-            <li><button class="nav-btn" onclick="showPage('antisab')">انتساب</button></li>  
-            <li><button class="nav-btn" onclick="showPage('quizzes')">بنك الأسئلة</button></li>  
-            <li><button class="nav-btn" onclick="showPage('contact')">تواصل معنا</button></li>  
+            <li><button class="nav-btn active" onclick="showPage('home')"><i class="fa-solid fa-house"></i> الرئيسية</button></li>  
+            <li><button class="nav-btn" onclick="showPage('antizam')"><i class="fa-solid fa-calendar-days"></i> انتظام</button></li>  
+            <li><button class="nav-btn" onclick="showPage('antisab')"><i class="fa-solid fa-user-group"></i> انتساب</button></li>  
+            <li><button class="nav-btn" onclick="showPage('quizzes')"><i class="fa-solid fa-circle-question"></i> بنك الأسئلة</button></li>  
+            <li><button class="nav-btn" onclick="showPage('contact')"><i class="fa-solid fa-comments"></i> تواصل معنا</button></li>  
         </ul>  
 
         <div class="nav-right-controls">  
@@ -53,15 +54,17 @@
                 <div class="badge-dot"></div>  
                 مرحباً بكم في منصة الخلاصة | Top Notes لكلية التجارة  
             </div>  
-            <h1 class="hero-title">طريقك المختصر <br>للتفوق والامتياز 🏆</h1>  
+            <h1 class="hero-title">طريقك المختصر <br><span class="gold-text">للتفوق والامتياز</span> 🏆</h1>  
             <p class="hero-desc">موقعك التعليمي الأول لكلية التجارة. جميع ملخصات المواد، شروحات الفيديو المتخصصة، الامتحانات السابقة بالإجابات النموذجية، والأسئلة التفاعلية مجاناً!</p>  
             <div class="quote-box">" النجاح ليس صدفة، بل هو نتيجة للتخطيط الذكي واختيار المصدر الصحيح للمذاكرة "</div>  
             <div class="stats-container">  
                 <div class="stat-box">  
+                    <i class="fa-solid fa-file-lines stat-icon"></i>
                     <div id="stat-subjects-count" class="stat-number">0</div>  
                     <div class="stat-label">إجمالي المواد المتاحة</div>  
                 </div>  
                 <div class="stat-box">  
+                    <i class="fa-solid fa-circle-play stat-icon"></i>
                     <div id="stat-lectures-count" class="stat-number">0</div>  
                     <div class="stat-label">إجمالي المحاضرات المرفوعة</div>  
                 </div>  
@@ -155,7 +158,8 @@
 
     <!-- Quizzes Page -->  
     <div id="quizzes" class="page" style="display: none;">  
-        <div style="text-align: center; margin-bottom: 1.5rem;">  
+        <div class="quizzes-head" style="text-align: center; margin-bottom: 1.5rem;">  
+            <button class="lb-box" onclick="openLeaderboard()"><i class="fa-solid fa-trophy"></i><span>الترتيب</span></button>
             <h2>بنك الأسئلة والاختبارات التفاعلية</h2>  
             <p style="color:var(--text-muted);">اختر الاختبار وابدأ الحل للتقييم والتصحيح التلقائي</p>  
         </div>  
@@ -216,8 +220,17 @@
 <div id="auth-modal" class="modal" style="display:none;">  
     <div class="login-card">  
         <h2 style="color:var(--primary-gold); margin-bottom:0.3rem;">الخلاصة | Top Notes</h2>  
-        <p style="color:var(--text-muted); font-size:0.85rem; margin-bottom:1.5rem;">يرجى تسجيل الدخول للمتابعة إلى المنصة</p>  
-          
+        <p id="auth-sub" style="color:var(--text-muted); font-size:0.85rem; margin-bottom:1rem;">يرجى تسجيل الدخول للمتابعة إلى المنصة</p>  
+
+        <div class="auth-tabs">
+            <button id="tab-login" class="auth-tab active" onclick="setAuthMode('login')">تسجيل الدخول</button>
+            <button id="tab-signup" class="auth-tab" onclick="setAuthMode('signup')">حساب جديد</button>
+        </div>
+
+        <div class="form-group" id="auth-name-group" style="display:none;">  
+            <label>الاسم (يظهر في الترتيب)</label>  
+            <input type="text" id="auth-name" placeholder="اكتب اسمك">  
+        </div>  
         <div class="form-group">  
             <label>البريد الإلكتروني</label>  
             <input type="email" id="auth-email" placeholder="example@email.com">  
@@ -226,20 +239,45 @@
             <label>كلمة المرور</label>  
             <input type="password" id="auth-pass" placeholder="••••••••">  
         </div>  
-        <button class="btn-submit" onclick="handleAuth()">دخول للمنصة</button>  
+        <div class="form-group" id="auth-confirm-group" style="display:none;">  
+            <label>تأكيد كلمة المرور</label>  
+            <input type="password" id="auth-pass2" placeholder="••••••••">  
+        </div>  
+        <div id="auth-error" class="auth-error"></div>
+        <button id="auth-submit" class="btn-submit" onclick="handleAuth()">دخول للمنصة</button>  
+        <button id="auth-forgot" class="auth-link" onclick="resetPassword()">نسيت كلمة المرور؟</button>
     </div>  
 </div>  
 
-<!-- Student Name Modal -->  
-<div id="student-name-modal" class="modal" style="display:none;">  
+<!-- Quiz Start Modal -->  
+<div id="quiz-start-modal" class="modal" style="display:none;">  
     <div class="login-card">  
-        <h3 style="color:var(--primary-gold); margin-bottom:0.5rem;">تسجيل اسم الطالب</h3>  
-        <p style="color:var(--text-muted); font-size:0.85rem; margin-bottom:1.2rem;">يرجى كتابة الاسم رباعي لبدء الاختبار وحفظ النتيجة</p>  
+        <h3 id="qs-title" style="color:var(--primary-gold); margin-bottom:0.3rem;"></h3>  
+        <p id="qs-info" style="color:var(--text-muted); font-size:0.85rem; margin-bottom:1.2rem;"></p>  
         <div class="form-group">  
-            <label>الاسم رباعي</label>  
-            <input type="text" id="student-full-name" placeholder="اكتب اسمك لدخول الاختبار">  
+            <label>عدد الأسئلة</label>  
+            <select id="qs-count"></select>  
         </div>  
-        <button class="btn-submit" onclick="startQuizWithStudentName()">بدء الاختبار الان</button>  
+        <div class="form-group">  
+            <label>طريقة اختيار الأسئلة</label>  
+            <label class="qs-radio"><input type="radio" name="qs-mode" value="first" checked> أول الأسئلة بالترتيب</label>  
+            <label class="qs-radio"><input type="radio" name="qs-mode" value="random"> أسئلة عشوائية</label>  
+        </div>  
+        <p id="qs-time-note" style="color:var(--text-muted); font-size:0.78rem; margin-bottom:0.6rem;"></p>  
+        <button class="btn-submit" onclick="startQuiz()">بدء الاختبار الان</button>  
+        <button class="btn-track-secondary" style="width:100%; margin-top:0.8rem;" onclick="closeModal('quiz-start-modal')">إلغاء</button>  
+    </div>  
+</div>  
+
+<!-- Leaderboard Modal -->  
+<div id="leaderboard-modal" class="modal" style="display:none;">  
+    <div class="login-card lb-card">  
+        <h3 style="color:var(--primary-gold); margin-bottom:0.8rem;"><i class="fa-solid fa-trophy"></i> الترتيب</h3>  
+        <div class="form-group" style="margin-bottom:0.8rem;">  
+            <select id="lb-quiz-select" onchange="loadLeaderboard()"></select>  
+        </div>  
+        <div id="lb-body"></div>  
+        <button class="btn-track-secondary" style="width:100%; margin-top:1rem;" onclick="closeModal('leaderboard-modal')">إغلاق</button>  
     </div>  
 </div>  
 
@@ -315,34 +353,75 @@
 
 <!-- Quiz Modal -->  
 <div id="quiz-modal" class="modal" style="display:none;">  
-    <div class="login-card" style="max-width: 500px;">  
+    <div class="login-card quiz-builder-card">  
         <h3>إضافة اختبار جديد</h3>  
+        <div class="quiz-builder-scroll">
         <div class="form-group" style="margin-top:1rem;">  
             <label>عنوان الاختبار / المحاضرة</label>  
             <input type="text" id="quiz-title-input" placeholder="مثال: أسئلة المحاضرة الأولى للمحاسبة">  
         </div>  
         <div class="form-group">  
-            <label>نوع الاختبار</label>  
-            <select id="quiz-type-select">  
-                <option value="tf">صح وغلط</option>  
-                <option value="mcq">اختيارات متعددة</option>  
-                <option value="essay">مقالي</option>  
-            </select>  
+            <label>مدة الاختبار بالدقائق (0 = بدون وقت)</label>  
+            <input type="number" id="quiz-time-input" min="0" value="0">  
         </div>  
         <div class="form-group">  
             <label>صورة الاختبار (اختياري)</label>  
             <input type="file" id="quiz-image-input" accept="image/*">  
         </div>  
-          
-        <div id="quiz-builder-area" style="max-height: 200px; overflow-y: auto; text-align: right; margin-bottom: 1rem;"></div>  
 
-        <button class="btn-track-secondary" style="width:100%; margin-bottom:0.5rem;" onclick="addQuestionField()">+ إضافة سؤال جديد</button>  
+        <details class="quiz-import">
+            <summary>استيراد أسئلة من نص جاهز</summary>
+            <textarea id="quiz-import-text" rows="6" placeholder="الصق الأسئلة هنا بالتنسيق اللي هقولك عليه"></textarea>
+            <button type="button" class="btn-track-secondary" style="width:100%; margin-top:0.4rem;" onclick="importQuestions()">استيراد</button>
+            <p id="quiz-import-msg" style="font-size:0.8rem; color:var(--primary-gold); margin-top:0.4rem;"></p>
+        </details>
+
+        <div class="qb-add-row">
+            <select id="new-q-type">  
+                <option value="mcq">اختيار من متعدد</option>  
+                <option value="tf">صح وغلط</option>  
+                <option value="essay">مقالي</option>  
+            </select>  
+            <button type="button" class="btn-track-secondary" onclick="addQuestionField()">+ إضافة سؤال</button>  
+        </div>
+        <p style="font-size:0.8rem; color:var(--text-muted); margin:0.4rem 0;">عدد الأسئلة: <b id="quiz-q-count">0</b></p>
+        <div id="quiz-builder-area"></div>  
+        </div>
+
         <button class="btn-submit" onclick="saveQuizData()">حفظ ونشر الاختبار</button>  
         <button class="btn-track-secondary" style="width:100%; margin-top:0.5rem;" onclick="closeModal('quiz-modal')">إلغاء</button>  
     </div>  
 </div>  
 
-<!-- استدعاء ملف الجافاسكريبت بنظام الـ Module -->  
+<!-- مؤقت المذاكرة -->
+<div id="pomo">
+    <div class="pomo-panel">
+        <div class="pomo-mode" id="pomo-mode">وقت المذاكرة</div>
+        <div class="pomo-time" id="pomo-time">25:00</div>
+        <div class="pomo-bar"><div id="pomo-bar-fill"></div></div>
+        <div class="pomo-actions">
+            <button class="pomo-btn main" id="pomo-start" onclick="pomoToggle()">ابدأ</button>
+            <button class="pomo-btn" onclick="pomoReset()">إعادة</button>
+            <button class="pomo-btn" onclick="pomoSkip()">تخطي</button>
+        </div>
+        <div class="pomo-note">25 دقيقة مذاكرة ثم 5 دقائق راحة، ويتكرر طول ما الموقع مفتوح.</div>
+    </div>
+    <button class="pomo-fab" id="pomo-fab" onclick="pomoPanel()"><i class="fa-solid fa-hourglass-half"></i> <span class="pomo-mini-time" id="pomo-mini">25:00</span></button>
+</div>
+<div id="pomo-toast"></div>
+<div id="quiz-timer"><i class="fa-solid fa-stopwatch"></i> <span id="quiz-timer-text">00:00</span></div>
+
+<!-- نافذة الآية -->
+<div id="verse-modal" class="modal">
+    <div class="verse-card">
+        <div class="verse-orn"><i class="fa-solid fa-book-quran"></i></div>
+        <div class="verse-title">آية قبل ما تبدأ المذاكرة</div>
+        <div class="verse-text" id="verse-text"></div>
+        <div class="verse-ref" id="verse-ref"></div>
+        <button class="btn-submit" onclick="closeVerse()">ادخل بسم الله</button>
+    </div>
+</div>
+
 <script type="module" src="script.js"></script>
 
 </body>  
