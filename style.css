@@ -1257,3 +1257,27 @@ font-weight: 900;
 }
 
 #quiz-solve { padding-bottom: 80px; }
+
+.lb-tabs { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.9rem; justify-content: center; }
+.lb-tab {
+border: 1px solid var(--card-border);
+background: var(--input-bg);
+color: var(--text-main);
+border-radius: 999px;
+padding: 0.4rem 0.9rem;
+font-weight: 700;
+font-size: 0.82rem;
+cursor: pointer;
+}
+.lb-tab.active { background: var(--gold-grad); color: var(--on-gold); border-color: transparent; }
+.practice-note {
+background: rgba(255, 122, 137, 0.12);
+border: 1px solid var(--danger);
+color: var(--text-main);
+border-radius: 12px;
+padding: 0.8rem 1rem;
+margin-bottom: 1rem;
+font-size: 0.88rem;
+line-height: 1.8;
+text-align: right;
+}

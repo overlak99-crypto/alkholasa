@@ -30,7 +30,6 @@ let lectures = [];
 let quizzes = [];
 let lecturesCount = null;
 
-// ===== تخزين مؤقت لتقليل القراءات من Firestore =====
 const CACHE_TTL = 10 * 60 * 1000; // 10 دقايق
 
 function cacheGet(key) {
@@ -90,6 +89,17 @@ async function loadLectureCount(force) {
         const c = cacheGet('lecCount');
         if (c !== null) { lecturesCount = c; return; }
     }
+
+    try {
+        const m = await getDoc(doc(db, "meta", "stats"));
+        if (m.exists() && typeof m.data().lectures === 'number') {
+            lecturesCount = m.data().lectures;
+            cacheSet('lecCount', lecturesCount);
+            return;
+        }
+    } catch (e) {
+        console.error("Stats doc error:", e);
+    }
     try {
         const r = await getCountFromServer(collection(db, "lectures"));
         lecturesCount = r.data().count;
@@ -98,6 +108,23 @@ async function loadLectureCount(force) {
         console.error("Count error:", e);
         const st = cacheStale('lecCount');
         if (st !== null) lecturesCount = st;
+    }
+}
+
+async function syncLectureCount(delta) {
+    if (!currentUser || !currentUser.isAdmin) return;
+    let n = null;
+    try {
+        const r = await getCountFromServer(collection(db, "lectures"));
+        n = r.data().count;
+    } catch (e) {
+        if (typeof lecturesCount === 'number' && typeof delta === 'number') n = Math.max(0, lecturesCount + delta);
+    }
+    if (n === null) return;
+    try {
+        await setDoc(doc(db, "meta", "stats"), { lectures: n, updatedAt: Date.now() });
+    } catch (e) {
+        console.error("Sync count error:", e);
     }
 }
 
@@ -212,9 +239,6 @@ function toggleTheme() {
     }
 }
 
-// ==========================================================
-//  الحسابات (Firebase Authentication)
-// ==========================================================
 const ADMIN_EMAILS = ['admin@alkholasa.com'];
 let authMode = 'login';
 let authBusy = false;
@@ -364,9 +388,6 @@ function updateUIForAuth() {
     }
 }
 
-// ==========================================================
-//  آية قبل المذاكرة
-// ==========================================================
 const VERSES = [
     { t: 'وَقُل رَّبِّ زِدْنِي عِلْمًا', r: 'سورة طه - الآية 114' },
     { t: 'يَرْفَعِ اللَّهُ الَّذِينَ آمَنُوا مِنكُمْ وَالَّذِينَ أُوتُوا الْعِلْمَ دَرَجَاتٍ ۚ وَاللَّهُ بِمَا تَعْمَلُونَ خَبِيرٌ', r: 'سورة المجادلة - الآية 11' },
@@ -405,9 +426,6 @@ function closeVerse() {
     if (m) m.style.display = 'none';
 }
 
-// ==========================================================
-//  مؤقت المذاكرة (25 دقيقة مذاكرة / 5 دقائق راحة)
-// ==========================================================
 const POMO_STUDY = 25 * 60 * 1000;
 const POMO_BREAK = 5 * 60 * 1000;
 let pomo = { mode: 'study', endAt: null, left: POMO_STUDY };
@@ -486,7 +504,6 @@ function pomoToast(msg) {
 function pomoTick() {
     if (!pomo.endAt) return;
     if (Date.now() >= pomo.endAt) {
-        // انتهت الفترة: صوت وتنبيه وبدء الفترة التالية تلقائياً
         const wasStudy = pomo.mode === 'study';
         pomo.mode = wasStudy ? 'break' : 'study';
         pomo.endAt = Date.now() + pomoTotal();
@@ -508,7 +525,6 @@ function pomoToggle() {
         pomo.endAt = null;
         if (pomoTimer) { clearInterval(pomoTimer); pomoTimer = null; }
     } else {
-        // الضغطة دي بتفتح الصوت في المتصفح
         try {
             audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
             if (audioCtx.state === 'suspended') audioCtx.resume();
@@ -573,7 +589,6 @@ function timeAgo(timestamp) {
     return 'منذ ' + days + ' يوم';
 }
 
-// زرار "تحديث الموقع الآن": بيمسح التخزين المؤقت ويجيب أحدث بيانات
 async function triggerUpdateProcess() {
     const banner = document.getElementById('update-progress-banner');
     const fill = document.getElementById('progress-bar-fill');
@@ -581,6 +596,7 @@ async function triggerUpdateProcess() {
     if (fill) fill.style.width = '30%';
 
     cacheClear();
+    await syncLectureCount();
     await loadDataFromCloud(true);
     updateStats();
 
@@ -716,7 +732,6 @@ function openAddLectureModal() {
     document.getElementById('lecture-modal').style.display = 'flex';
 }
 
-// ===== إعدادات Cloudinary =====
 const CLOUD_NAME = 'flilvppv';
 const UPLOAD_PRESET = 'kholasa';
 
@@ -776,6 +791,7 @@ async function saveLectureData() {
             createdAt: Date.now()
         });
 
+        await syncLectureCount(1);
         cacheClear();
         closeModal('lecture-modal');
         await loadDataFromCloud();
@@ -827,6 +843,7 @@ async function deleteLecture(e, id) {
     e.stopPropagation();
     try {
         await deleteDoc(doc(db, "lectures", String(id)));
+        await syncLectureCount(-1);
         cacheClear();
         await loadDataFromCloud();
         await loadLecturesOf(currentSubjectId);
@@ -918,11 +935,9 @@ function viewMedia(type, index, mediaType) {
 
 function showPdfAsImages(item, body) {
     const url = item.data;
-    // العلامة المائية للطلاب فقط، والأدمن مفيش عليه علامة
     const showMark = !!(currentUser && !currentUser.isAdmin);
     const email = showMark ? currentUser.email : '';
 
-    // لو الملف مش PDF على Cloudinary، نعرضه بشكل عادي
     if (!(url.indexOf('/image/upload/') !== -1 && /\.pdf($|\?)/i.test(url))) {
         body.innerHTML = '<iframe src="' + url + '#toolbar=0&navpanes=0" style="width:100%; height:65vh; border:none; border-radius:8px;"></iframe>';
         return;
@@ -937,7 +952,6 @@ function showPdfAsImages(item, body) {
     const pages = document.createElement('div');
     wrapper.appendChild(pages);
 
-    // علامة مائية بإيميل الطالب (مش بتظهر للأدمن)
     if (showMark) {
         const safeEmail = email.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         const svg = "<svg xmlns='http://www.w3.org/2000/svg' width='320' height='200'><text x='20' y='110' fill='rgba(120,120,120,0.28)' font-size='16' font-family='Arial' transform='rotate(-25 160 100)'>" + safeEmail + "</text></svg>";
@@ -974,9 +988,6 @@ function goBackToSubject() {
     if (sub) openSubjectDetail(sub);
 }
 
-// ==========================================================
-//  بنك الأسئلة
-// ==========================================================
 function esc(s) {
     return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
@@ -1018,7 +1029,6 @@ function renderQuizzes() {
     });
 }
 
-// ---------- بناء الاختبار (للأدمن) ----------
 function openAddQuizModal() {
     document.getElementById('quiz-title-input').value = '';
     document.getElementById('quiz-time-input').value = '0';
@@ -1087,7 +1097,6 @@ function addQuestionField(data) {
     }
 }
 
-// ---------- استيراد أسئلة من نص ----------
 const LETTER_IDX = { 'أ': 0, 'ا': 0, 'a': 0, 'A': 0, '1': 0, 'ب': 1, 'b': 1, 'B': 1, '2': 1, 'ج': 2, 'c': 2, 'C': 2, '3': 2, 'د': 3, 'd': 3, 'D': 3, '4': 3, 'هـ': 4, 'ه': 4, 'e': 4, 'E': 4, '5': 4, 'و': 5, 'f': 5, 'F': 5, '6': 5 };
 
 function parseImportText(text) {
@@ -1162,7 +1171,6 @@ function importQuestions() {
     const ta = document.getElementById('quiz-import-text');
     const msg = document.getElementById('quiz-import-msg');
     const r = parseImportText(ta.value);
-    // لو فيه صندوق فاضي لوحده نشيله قبل الإضافة
     document.querySelectorAll('#quiz-builder-area .qb').forEach(function(b) {
         if (!b.querySelector('.q-text').value.trim()) b.remove();
     });
@@ -1248,7 +1256,6 @@ async function deleteQuiz(e, id) {
     }
 }
 
-// ---------- بداية الحل ----------
 function openQuizStart(quiz) {
     activeQuiz = quiz;
     const total = quiz.questions.length;
@@ -1274,7 +1281,41 @@ function shuffle(arr) {
     return a;
 }
 
-function startQuiz() {
+function attemptKey(quizId) {
+    return 'kh_done_' + quizId + '_' + (currentUser ? currentUser.uid : '');
+}
+
+// هل الطالب حل الاختبار ده وتصحح قبل كده؟ (الأدمن دايماً مسموح له)
+async function hasAttempted(quizId) {
+    if (!currentUser || currentUser.isAdmin) return false;
+    try { if (localStorage.getItem(attemptKey(quizId)) === '1') return true; } catch (e) {}
+    try {
+        const snap = await getDoc(doc(db, 'attempts', quizId + '_' + currentUser.uid));
+        if (snap.exists()) {
+            try { localStorage.setItem(attemptKey(quizId), '1'); } catch (e) {}
+            return true;
+        }
+    } catch (e) {
+        console.error('Attempt check error:', e);
+    }
+    return false;
+}
+
+async function markAttempt(quizId) {
+    if (!currentUser || currentUser.isAdmin) return;
+    try { localStorage.setItem(attemptKey(quizId), '1'); } catch (e) {}
+    try {
+        await setDoc(doc(db, 'attempts', quizId + '_' + currentUser.uid), { quizId: quizId, uid: currentUser.uid, at: Date.now() });
+    } catch (e) {
+        console.error('Mark attempt error:', e);
+    }
+}
+
+async function startQuiz() {
+    const startBtn = document.querySelector('#quiz-start-modal .btn-submit');
+    if (startBtn) { startBtn.disabled = true; startBtn.innerText = 'جاري التحضير...'; }
+    const practice = await hasAttempted(activeQuiz.id);
+    if (startBtn) { startBtn.disabled = false; startBtn.innerText = 'بدء الاختبار الان'; }
     const total = activeQuiz.questions.length;
     const v = document.getElementById('qs-count').value;
     const n = v === 'all' ? total : Math.min(total, parseInt(v, 10));
@@ -1288,7 +1329,8 @@ function startQuiz() {
         minutes: minutes,
         startedAt: Date.now(),
         endAt: minutes ? Date.now() + minutes * 60000 : 0,
-        submitted: false
+        submitted: false,
+        practice: practice
     };
     closeModal('quiz-start-modal');
     renderQuizSolvePage();
@@ -1327,6 +1369,10 @@ function renderQuizSolvePage() {
 
     const body = document.getElementById('quiz-questions-body');
     let html = '';
+
+    if (quizRun.practice) {
+        html += '<div class="practice-note">⚠️ دي محاولة إضافية: تقدر تحل وتراجع الأسئلة، لكن مش هيتم تصحيحها ولا تدخل في الترتيب. التصحيح بيظهر في المحاولة الأولى بس.</div>';
+    }
 
     if (activeQuiz.image) {
         html += '<div style="text-align:center; margin-bottom:1.5rem;"><img src="' + esc(activeQuiz.image) + '" style="max-width:100%; border-radius:12px; border:1px solid var(--card-border);"></div>';
@@ -1368,6 +1414,20 @@ function submitQuizAnswers(auto) {
     if (!quizRun || quizRun.submitted) return;
     quizRun.submitted = true;
     stopQuizTimer();
+
+    if (quizRun.practice) {
+        document.querySelectorAll('#quiz-questions-body input, #quiz-questions-body textarea').forEach(function(el) { el.disabled = true; });
+        const sbp = document.getElementById('quiz-submit-btn');
+        if (sbp) sbp.style.display = 'none';
+        const areaP = document.getElementById('quiz-results-area');
+        areaP.innerHTML = '<div class="quiz-result-card"><h3 style="text-align:center; color:var(--accent-cyan);">تم تسليم إجاباتك</h3>' +
+            (auto ? '<p style="text-align:center; color:var(--danger); margin-top:0.4rem;">⏱ انتهى الوقت</p>' : '') +
+            '<p style="text-align:center; color:var(--text-muted); margin-top:0.8rem; line-height:1.8;">دي مش محاولتك الأولى في الاختبار ده، فمفيش تصحيح ولا درجة. تقدر ترجع تراجع الأسئلة بالأعلى.</p></div>';
+        areaP.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        return;
+    }
+
+    markAttempt(activeQuiz.id);
 
     const timeSec = Math.round((Date.now() - quizRun.startedAt) / 1000);
     let score = 0, gradable = 0;
@@ -1472,24 +1532,38 @@ async function saveQuizResult(score, gradable, percent, timeSec) {
     }
 }
 
+let lbCurrent = null;
+
 async function openLeaderboard(quizId) {
     document.getElementById('leaderboard-modal').style.display = 'flex';
-    const sel = document.getElementById('lb-quiz-select');
-    try { if (quizzes.length === 0) await loadQuizzes(); } catch (e) {}
-    sel.innerHTML = '';
+    const tabs = document.getElementById('lb-tabs');
+    tabs.innerHTML = '';
+    document.getElementById('lb-body').innerHTML = '<p class="lb-empty">جاري التحميل...</p>';
+    try { await loadQuizzes(); } catch (e) { console.error(e); }
+
+    if (quizzes.length === 0) {
+        document.getElementById('lb-body').innerHTML = '<p class="lb-empty">لا توجد اختبارات بعد.</p>';
+        return;
+    }
     quizzes.forEach(function(q) {
-        const o = document.createElement('option');
-        o.value = q.id; o.textContent = q.title;
-        sel.appendChild(o);
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'lb-tab';
+        b.dataset.id = q.id;
+        b.textContent = q.title;
+        b.addEventListener('click', function() { loadLeaderboard(q.id); });
+        tabs.appendChild(b);
     });
-    if (quizId && quizzes.some(function(q) { return q.id === quizId; })) sel.value = quizId;
-    loadLeaderboard();
+    const first = (quizId && quizzes.some(function(q) { return q.id === quizId; })) ? quizId : quizzes[0].id;
+    loadLeaderboard(first);
 }
 
-async function loadLeaderboard() {
-    const id = document.getElementById('lb-quiz-select').value;
+async function loadLeaderboard(id) {
+    lbCurrent = id;
+    document.querySelectorAll('#lb-tabs .lb-tab').forEach(function(b) {
+        b.classList.toggle('active', b.dataset.id === id);
+    });
     const body = document.getElementById('lb-body');
-    if (!id) { body.innerHTML = '<p class="lb-empty">لا توجد اختبارات بعد.</p>'; return; }
     body.innerHTML = '<p class="lb-empty">جاري التحميل...</p>';
 
     try {
@@ -1500,6 +1574,7 @@ async function loadLeaderboard() {
             snap.forEach(function(d) { rows.push(d.data()); });
             cacheSet('lb_' + id, rows);
         }
+        if (lbCurrent !== id) return;
         rows.sort(function(a, b) { return (b.percent - a.percent) || (a.timeSec - b.timeSec); });
 
         if (rows.length === 0) { body.innerHTML = '<p class="lb-empty">لا توجد نتائج لهذا الاختبار بعد. كن أول المتصدرين!</p>'; return; }
@@ -1577,13 +1652,11 @@ window.resetPassword = resetPassword;
 window.submitQuizAnswers = submitQuizAnswers;
 window.triggerUpdateProcess = triggerUpdateProcess;
 
-// ربط زرار حفظ المحاضرة (مرة واحدة فقط)
 const saveLectureBtnEl = document.getElementById('saveLectureBtn');
 if (saveLectureBtnEl) {
     saveLectureBtnEl.addEventListener('click', saveLectureData);
 }
 
-// قفل نافذة عرض الملفات بزرار Esc أو بالضغط على الخلفية
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') closeModal('media-view-modal');
 });
@@ -1595,7 +1668,6 @@ if (mediaModalEl) {
     });
 }
 
-// زرار Enter في نافذة الدخول
 ['auth-email', 'auth-pass', 'auth-pass2', 'auth-name'].forEach(function(id) {
     const el = document.getElementById(id);
     if (el) el.addEventListener('keydown', function(e) { if (e.key === 'Enter') handleAuth(); });
