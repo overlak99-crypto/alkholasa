@@ -1281,3 +1281,71 @@ font-size: 0.88rem;
 line-height: 1.8;
 text-align: right;
 }
+
+/* ===== بحث / إعلان / تقدم / أدوات الكارت ===== */
+.search-box {
+width: 100%;
+max-width: 420px;
+display: block;
+margin: 0 auto 1.2rem;
+padding: 0.7rem 1rem;
+border-radius: 999px;
+background: var(--input-bg);
+border: 1px solid var(--card-border);
+color: var(--text-main);
+outline: none;
+font-family: inherit;
+text-align: right;
+}
+.search-box:focus { border-color: var(--primary-gold); }
+.announce-box {
+display: flex;
+align-items: flex-start;
+gap: 0.7rem;
+text-align: right;
+background: rgba(255, 200, 80, 0.12);
+border: 1px solid var(--primary-gold);
+color: var(--text-main);
+border-radius: 14px;
+padding: 0.8rem 1rem;
+margin: 1rem 0;
+line-height: 1.9;
+white-space: pre-wrap;
+}
+.announce-box i { color: var(--primary-gold); margin-top: 0.35rem; }
+.progress-wrap { max-width: 420px; margin: 0 auto 1rem; text-align: center; font-size: 0.85rem; color: var(--text-muted); }
+.progress-track { height: 10px; background: var(--input-bg); border-radius: 999px; overflow: hidden; margin-top: 0.4rem; border: 1px solid var(--card-border); }
+.progress-fill { height: 100%; background: var(--gold-grad); width: 0; transition: width 0.4s; }
+.card-tools { position: absolute; top: 0.8rem; left: 3.2rem; display: flex; gap: 0.35rem; }
+.card-tool {
+background: rgba(120, 120, 255, 0.18);
+color: var(--text-main);
+border: none;
+width: 30px;
+height: 30px;
+border-radius: 50%;
+cursor: pointer;
+display: flex;
+align-items: center;
+justify-content: center;
+font-size: 0.8rem;
+}
+.done-badge { color: #3ddc97; font-size: 0.8rem; font-weight: bold; margin-top: 0.3rem; }
+.studied-btn {
+display: block;
+margin: 0 auto 1.5rem;
+padding: 0.6rem 1.4rem;
+border-radius: 999px;
+border: 1px solid var(--primary-gold);
+background: transparent;
+color: var(--primary-gold);
+font-weight: bold;
+cursor: pointer;
+font-family: inherit;
+}
+.studied-btn.on { background: #3ddc97; border-color: #3ddc97; color: #08301f; }
+.existing-item { display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; padding: 0.3rem 0; }
+.existing-box { border: 1px dashed var(--card-border); border-radius: 8px; padding: 0.5rem 0.7rem; margin-bottom: 0.8rem; }
+.review-mark { margin-top: 0.6rem; font-size: 0.88rem; font-weight: bold; }
+.review-mark.ok { color: #3ddc97; }
+.review-mark.bad { color: var(--danger); }
