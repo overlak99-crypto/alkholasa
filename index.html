@@ -14,6 +14,7 @@
 </head>  
 <body oncontextmenu="return false;">
 
+<!-- شاشة اللوجو -->
 <div id="splash">
     <svg class="splash-svg" viewBox="0 0 300 230" fill="none" stroke="url(#sg)" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round">
         <defs><linearGradient id="sg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffe2a3"/><stop offset=".5" stop-color="#f0bd68"/><stop offset="1" stop-color="#d4903a"/></linearGradient></defs>
@@ -30,6 +31,7 @@
     <div class="splash-skip">اضغط للتخطي</div>
 </div>
 
+<!-- شاشة تعطيل الموقع -->
 <div id="site-lock" style="display:none;">
     <div class="lock-card">
         <div class="lock-ic">🛠️</div>
@@ -39,6 +41,7 @@
     </div>
 </div>
 
+<!-- تأكيد الإيميل -->
 <div id="verify-modal" class="modal" style="display:none; z-index:3000;">
     <div class="login-card">
         <h3 style="color:var(--primary-gold);">📧 أكّد بريدك الإلكتروني</h3>
@@ -50,6 +53,7 @@
     </div>
 </div>
 
+<!-- نافذة عامة -->
 <div id="gen-modal" class="modal" style="display:none;">
     <div class="login-card gen-card">
         <div class="gen-head"><h3 id="gen-title"></h3><button class="gen-x" onclick="closeModal('gen-modal')"><i class="fa-solid fa-xmark"></i></button></div>
@@ -57,6 +61,7 @@
     </div>
 </div>
 
+<!-- دايرة الألوان -->
 <button id="pal-fab" class="pal-fab" onclick="togglePalPanel()" title="ألوان الموقع" style="display:none;"></button>
 <div id="pal-panel" class="pal-panel">
     <div class="pal-title">اختار لون الموقع</div>
@@ -143,7 +148,6 @@
                         <button class="btn-track-secondary" onclick="downloadBackup()"><i class="fa-solid fa-download"></i> نسخة احتياطية</button>
                     </div>
                 </div>  
-</div>  
             </div>  
         </div>  
 
@@ -195,6 +199,7 @@
         </div>  
     </div>  
 
+    <!-- Antizam Page -->  
     <div id="antizam" class="page" style="display: none;">  
         <div style="text-align: center; margin-bottom: 1.5rem;">  
             <h2>قسم الانتظام</h2>  
@@ -208,6 +213,7 @@
         <div id="antizam-grid" class="subjects-grid"></div>  
     </div>  
 
+    <!-- Antisab Page -->  
     <div id="antisab" class="page" style="display: none;">  
         <div style="text-align: center; margin-bottom: 1.5rem;">  
             <h2>قسم الانتساب</h2>  
@@ -221,6 +227,7 @@
         <div id="antisab-grid" class="subjects-grid"></div>  
     </div>  
 
+    <!-- Past Exams Page -->  
     <div id="pastexams" class="page" style="display: none;">  
         <div style="text-align: center; margin-bottom: 1.5rem;">  
             <h2>الامتحانات السابقة</h2>  
@@ -234,11 +241,13 @@
         <div id="pastexams-grid" class="subjects-grid"></div>  
     </div>  
 
+    <!-- Account Page -->  
     <div id="account" class="page" style="display: none;">  
         <div style="text-align: center; margin-bottom: 1.5rem;"><h2>حسابي</h2></div>  
         <div id="account-body"></div>  
     </div>  
 
+    <!-- My Tools Page -->  
     <div id="mytools" class="page" style="display: none;">  
         <div style="text-align: center; margin-bottom: 1rem;"><h2>أدواتي</h2></div>  
         <div id="tools-tabs" class="lb-tabs" style="justify-content:center; margin-bottom:1rem;">
@@ -249,6 +258,7 @@
         <div id="tools-body"></div>  
     </div>  
 
+    <!-- Subject Detail Page -->  
     <div id="subject-detail" class="page" style="display: none;">  
         <div style="display:flex; align-items:center; gap:1rem; margin-bottom:1.5rem;">  
             <button class="btn-track-secondary" style="padding:0.4rem 0.9rem; font-size:0.85rem;" onclick="goBackToTrack()"><i class="fa-solid fa-arrow-right"></i> رجوع</button>  
@@ -264,6 +274,7 @@
         <div id="lectures-list" class="subjects-grid"></div>  
     </div>  
 
+    <!-- Lecture Detail Page -->  
     <div id="lecture-detail" class="page" style="display: none;">  
         <div style="display:flex; align-items:center; gap:1rem; margin-bottom:1.5rem;">  
             <button class="btn-track-secondary" style="padding:0.4rem 0.9rem; font-size:0.85rem;" onclick="goBackToSubject()"><i class="fa-solid fa-arrow-right"></i> رجوع للمادة</button>  
@@ -272,6 +283,7 @@
         <div id="lecture-content-list"></div>  
     </div>  
 
+    <!-- Quizzes Page -->  
     <div id="quizzes" class="page" style="display: none;">  
         <div class="quizzes-head" style="text-align: center; margin-bottom: 1.5rem;">  
             <button class="lb-box" onclick="openLeaderboard()"><i class="fa-solid fa-trophy"></i><span>الترتيب</span></button>
@@ -287,6 +299,7 @@
         <div id="quizzes-grid" class="subjects-grid"></div>  
     </div>  
 
+    <!-- Quiz Solving Page -->  
     <div id="quiz-solve" class="page" style="display: none;">  
         <div style="display:flex; align-items:center; gap:1rem; margin-bottom:1.5rem;">  
             <button class="btn-track-secondary" style="padding:0.4rem 0.9rem; font-size:0.85rem;" onclick="showPage('quizzes')"><i class="fa-solid fa-arrow-right"></i> رجوع للأسئلة</button>  
@@ -295,12 +308,13 @@
         <div id="quiz-questions-body"></div>  
     </div>  
 
+    <!-- Contact Page -->  
     <div id="contact" class="page" style="display: none;">  
         <div style="text-align: center; margin-bottom: 2rem;">  
             <h2>تواصل معنا</h2>  
             <p style="color:var(--text-muted);">نحن هنا لمساعدتك في أي استفسار</p>  
-        </div> 
-        
+        </div>  
+
         <div class="contact-grid">
     <div class="contact-card">
         <div class="contact-icon"><i class="fa-solid fa-users"></i></div>
@@ -320,6 +334,7 @@
     </div>  
 </div>  
 
+<!-- Back to Top Button -->  
 <button id="back-to-top" onclick="scrollToTop()" title="العودة للأعلى">  
     <i class="fa-solid fa-arrow-up"></i>  
 </button>  
@@ -357,6 +372,7 @@
     </div>  
 </div>  
 
+<!-- Quiz Start Modal -->  
 <div id="quiz-start-modal" class="modal" style="display:none;">  
     <div class="login-card">  
         <h3 id="qs-title" style="color:var(--primary-gold); margin-bottom:0.3rem;"></h3>  
@@ -377,6 +393,7 @@
     </div>  
 </div>  
 
+<!-- Leaderboard Modal -->  
 <div id="leaderboard-modal" class="modal" style="display:none;">  
     <div class="login-card lb-card">  
         <h3 style="color:var(--primary-gold); margin-bottom:0.8rem;"><i class="fa-solid fa-trophy"></i> الترتيب</h3>  
@@ -397,6 +414,7 @@
     </div>  
 </div>  
 
+<!-- WhatsApp Selection Modal -->  
 <div id="whatsapp-modal" class="modal" style="display:none;">  
     <div class="login-card" style="text-align: center;">  
         <h3 style="color:var(--primary-gold); margin-bottom: 0.5rem;">اختر من تريد مراسلته</h3>  
@@ -416,6 +434,7 @@
     </div>  
 </div>  
 
+<!-- Subject Modal -->  
 <div id="subject-modal" class="modal" style="display:none;">  
     <div class="login-card">  
         <h3>إضافة مادة جديدة</h3>  
@@ -428,6 +447,7 @@
     </div>  
 </div>  
 
+<!-- Announce Modal -->
 <div id="announce-modal" class="modal" style="display:none;">
     <div class="login-card" style="max-width: 450px;">
         <h3>إعلان الصفحة الرئيسية</h3>
@@ -440,6 +460,7 @@
     </div>
 </div>
 
+<!-- Lecture Modal -->  
 <div id="lecture-modal" class="modal" style="display:none;">  
     <div class="login-card" style="max-width: 450px;">  
         <h3 id="lecture-modal-title">إضافة محاضرة جديدة</h3>  
@@ -467,6 +488,7 @@
     </div>  
 </div>  
 
+<!-- Quiz Modal -->  
 <div id="quiz-modal" class="modal" style="display:none;">  
     <div class="login-card quiz-builder-card">  
         <h3 id="quiz-modal-title">إضافة اختبار جديد</h3>  
@@ -508,7 +530,9 @@
     </div>  
 </div>  
 
+<!-- استدعاء ملف الجافاسكريبت بنظام الـ Module -->  
 
+<!-- مؤقت المذاكرة -->
 <div id="pomo">
     <div class="pomo-panel">
         <div class="pomo-mode" id="pomo-mode">وقت المذاكرة</div>
@@ -526,6 +550,7 @@
 <div id="pomo-toast"></div>
 <div id="quiz-timer"><i class="fa-solid fa-stopwatch"></i> <span id="quiz-timer-text">00:00</span></div>
 
+<!-- نافذة الآية -->
 <div id="verse-modal" class="modal">
     <div class="verse-card">
         <div class="verse-orn"><i class="fa-solid fa-book-quran"></i></div>
