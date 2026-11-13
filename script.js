@@ -2924,11 +2924,8 @@ async function downloadCurrent() {
     b.disabled = false; b.innerHTML = old;
 }
 
-function setDl(fn) {
-    mediaDl = fn;
-    const b = document.getElementById('media-dl');
-    if (b) b.style.display = fn ? 'inline-block' : 'none';
-}
+// التنزيل متقفل للمحاضرات (حماية المحتوى)
+function setDl(fn) { mediaDl = null; const b = document.getElementById('media-dl'); if (b) b.style.display = 'none'; }
 
 function viewMedia(type, index, mediaType) {
     if (!currentMediaData || !currentMediaData[mediaType] || !currentMediaData[mediaType][index]) return;
