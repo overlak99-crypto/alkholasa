@@ -1498,3 +1498,45 @@ body.eye::after { content: ""; position: fixed; inset: 0; background: rgba(255, 
 #sm-preview{display:flex;flex-direction:column;gap:12px}
 .sm-page-img{width:100%;border-radius:6px;box-shadow:0 2px 10px rgba(0,0,0,.3);pointer-events:none}
 .mz-btns #media-dl{width:auto!important;height:auto!important;min-width:0;border-radius:20px;padding:.4rem .9rem;white-space:nowrap;font-size:.85rem;line-height:1.2;background:var(--primary-gold,#f0bd68);color:#000}
+
+/* قسم القصص */
+#stories-app{position:fixed;inset:0;z-index:900;overflow-y:auto;-webkit-overflow-scrolling:touch;background:radial-gradient(ellipse at top,#16463a 0%,#0b1f1a 60%);color:#f1ead7;font-family:'Tajawal',sans-serif;direction:rtl;--text-main:#f1ead7;--text-muted:#b9c9bf;--primary-gold:#e6c36a;--card-bg:rgba(255,255,255,.07);--card-border:rgba(230,195,106,.28)}
+#stories-app .gen-note{color:#b9c9bf}
+.st-hero{text-align:center;padding:2.5rem 1rem 1.2rem}
+.st-moon{font-size:3.2rem}
+.st-hero h1{color:#e6c36a;font-size:2.2rem;margin:.3rem 0}
+.st-hero p{color:#b9c9bf;margin-bottom:1rem}
+.st-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:1rem;max-width:960px;margin:0 auto;padding:1rem}
+.st-card{background:rgba(255,255,255,.07);border:1px solid rgba(230,195,106,.28);border-radius:18px;padding:1.4rem 1rem;text-align:center;cursor:pointer;transition:.2s}
+.st-card:hover,.st-card:active{transform:translateY(-3px);background:rgba(255,255,255,.12)}
+.st-ic{font-size:2.4rem}
+.st-card h3{color:#e6c36a;margin:.5rem 0 .3rem}
+.st-card p{color:#b9c9bf;font-size:.85rem}
+.st-bar{position:sticky;top:0;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:.5rem;padding:.7rem 1rem;background:rgba(11,31,26,.92);backdrop-filter:blur(10px);border-bottom:1px solid rgba(230,195,106,.25)}
+.st-bar-title{flex:1;text-align:center;color:#e6c36a;font-weight:700;font-size:.95rem}
+.st-back,.st-exit{background:rgba(255,255,255,.1);color:#f1ead7;border:1px solid rgba(230,195,106,.35);border-radius:20px;padding:.35rem .8rem;font-family:inherit;cursor:pointer;font-size:.8rem;white-space:nowrap}
+.st-exit.big{padding:.6rem 1.2rem;font-size:.95rem;background:#e6c36a;color:#0b1f1a;font-weight:700}
+.st-wrap{max-width:760px;margin:0 auto;padding:1rem 1rem 4rem}
+.st-add{width:100%;background:#e6c36a;color:#0b1f1a;border:none;border-radius:12px;padding:.8rem;font-weight:700;font-family:inherit;font-size:1rem;cursor:pointer;margin-bottom:1rem}
+.st-empty{text-align:center;color:#b9c9bf;padding:2rem}
+.st-item{display:flex;align-items:center;gap:.8rem;background:rgba(255,255,255,.07);border:1px solid rgba(230,195,106,.22);border-radius:14px;padding:.9rem 1rem;margin-bottom:.6rem;cursor:pointer}
+.st-num{background:#e6c36a;color:#0b1f1a;border-radius:50%;width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0}
+.st-it{flex:1;font-weight:700}
+.st-arrow{color:#e6c36a;font-size:1.4rem}
+.st-read-tools{display:flex;gap:.5rem;margin-bottom:1rem;flex-wrap:wrap}
+.st-read-tools button,.st-nav button{background:rgba(255,255,255,.1);color:#f1ead7;border:1px solid rgba(230,195,106,.35);border-radius:10px;padding:.4rem .9rem;font-family:inherit;cursor:pointer}
+.st-read-tools .danger{color:#ff9b9b;border-color:#ff9b9b}
+.st-article{line-height:2;background:rgba(255,255,255,.05);border-radius:16px;padding:1.2rem}
+.st-article h1{color:#e6c36a;font-size:1.5em;margin-bottom:.8rem}
+.st-article h2{color:#f0d58a;margin:1.2rem 0 .4rem;font-size:1.2em}
+.st-article h3{color:#e6c36a;margin:1rem 0 .3rem;font-size:1.1em}
+.st-article p{margin-bottom:.8rem}
+.st-article ul{padding-right:1.4rem;margin-bottom:.8rem}
+.st-article blockquote{background:rgba(230,195,106,.12);border-right:4px solid #e6c36a;border-radius:8px;padding:.7rem 1rem;margin:.8rem 0;color:#fbeab8}
+.st-article hr{border:none;border-top:1px solid rgba(230,195,106,.3);margin:1.2rem 0}
+.st-img{width:100%;border-radius:12px;margin:.8rem 0;pointer-events:none}
+.st-links{display:flex;flex-direction:column;gap:.5rem;margin-top:1rem}
+.st-links a{color:#0b1f1a;background:#e6c36a;border-radius:10px;padding:.6rem 1rem;text-decoration:none;font-weight:700;font-size:.9em}
+.st-nav{display:flex;justify-content:space-between;gap:.5rem;margin-top:1.2rem}
+.st-keep{display:flex;align-items:center;gap:.5rem;margin:.3rem 0}
+.st-keep img{width:60px;height:60px;object-fit:cover;border-radius:8px}

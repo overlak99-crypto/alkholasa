@@ -182,6 +182,11 @@
                 <h3>امتحان حقيقي</h3>  
                 <p style="color:var(--text-muted); font-size:0.85rem; margin-top:0.3rem;">وقت صارم وأسئلة عشوائية</p>  
             </div>  
+            <div class="path-card" onclick="openStories()">
+                <div class="path-icon"><i class="fa-solid fa-moon"></i></div>
+                <h3>قصص وسيَر</h3>
+                <p style="color:var(--text-muted); font-size:0.85rem; margin-top:0.3rem;">قصص الأنبياء والصحابة والسيرة</p>
+            </div>
             <div class="path-card" onclick="showPage('mytools')">  
                 <div class="path-icon"><i class="fa-solid fa-toolbox"></i></div>  
                 <h3>أدواتي</h3>  
@@ -339,7 +344,7 @@
             <div class="contact-card">  
                 <div class="contact-icon"><i class="fa-solid fa-code"></i></div>  
                 <h3>تصميم الموقع</h3>  
-                <h2 style="color:var(--primary-gold); margin:0.5rem 0;">زياد نادر جلال</h2>  
+                <h2 style="color:var(--primary-gold); margin:0.5rem 0;">زياد </h2>  
                 <p style="color:var(--text-muted); font-size:0.85rem;">تم تصميم وتطوير هذا الموقع بعناية ليكون سهل الاستخدام وأنيق المظهر لطلاب كلية التجارة.</p>  
             </div>  
             <div class="contact-card">  
@@ -586,6 +591,8 @@
         <button class="btn-submit" onclick="closeVerse()">ادخل بسم الله</button>
     </div>
 </div>
+
+<div id="stories-app" style="display:none;"><div id="stories-body"></div></div>
 
 <script type="module" src="script.js"></script>
 

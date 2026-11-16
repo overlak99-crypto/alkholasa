@@ -2791,6 +2791,7 @@ let wmCache = {};
 let mediaDl = null;
 
 function drawWatermark(ctx, w, h) {
+    return; // العلامة المائية متقفلة
     const size = Math.max(14, Math.round(Math.min(w, h * 0.8) / 18));
     ctx.save();
     ctx.font = 'bold ' + size + 'px Arial, sans-serif';
@@ -3217,6 +3218,233 @@ window.smPreview = smPreview;
 window.smDownload = smDownload;
 window.smSample = smSample;
 window.smClear = smClear;
+
+// ==========================================================
+//  قسم القصص والسير (مساحة مستقلة)
+// ==========================================================
+const ST_SECTIONS = [
+    { id: 'anbiya', icon: '🌙', name: 'قصص الأنبياء والمرسلين', desc: 'قصص الأنبياء عليهم السلام وعِبَرها' },
+    { id: 'sahaba', icon: '🕌', name: 'سيَر الصحابة', desc: 'حياة الصحابة رضي الله عنهم ومواقفهم' },
+    { id: 'asma', icon: '📖', name: 'أسماء الله الحسنى ومعانيها', desc: 'نتعرّف على أسماء الله ومعانيها' },
+    { id: 'mawaez', icon: '🤲', name: 'مواعظ وقصص مؤثرة', desc: 'قصص وعِبر تلين القلوب' },
+    { id: 'seera', icon: '⭐', name: 'السيرة النبوية', desc: 'سيرة النبي ﷺ مرتبة ومبسطة' }
+];
+let stView = { v: 'home', sec: null, story: null };
+let stList = [];
+let stSaving = false;
+let stEditing = null;
+const stSecOf = function(id) { return ST_SECTIONS.filter(function(s) { return s.id === id; })[0]; };
+
+function stFont() { return lsGet('kh_st_font', 1.15); }
+
+function openStories() {
+    if (!currentUser) { openAuthModal(); return; }
+    if (siteDisabled && !currentUser.isAdmin) return;
+    $('stories-app').style.display = 'block';
+    document.body.style.overflow = 'hidden';
+    stGo('home');
+}
+
+function closeStories() {
+    $('stories-app').style.display = 'none';
+    document.body.style.overflow = '';
+    window.scrollTo(0, 0);
+}
+
+function stBar(backFn, title) {
+    return '<div class="st-bar">' +
+        '<button class="st-back" onclick="' + backFn + '">→ رجوع</button>' +
+        '<div class="st-bar-title">' + esc(title) + '</div>' +
+        '<button class="st-exit" onclick="closeStories()">🏠 موقع المذاكرة</button></div>';
+}
+
+function stGo(v, a, b) {
+    const box = $('stories-body');
+    $('stories-app').scrollTop = 0;
+    if (v === 'home') { stView = { v: 'home' }; stHome(box); }
+    else if (v === 'list') { stView = { v: 'list', sec: a }; stListView(box, a); }
+    else if (v === 'read') { stView = { v: 'read', sec: a, story: b }; stRead(box, a, b); }
+}
+
+function stHome(box) {
+    let h = '<div class="st-hero"><div class="st-moon">🌙</div><h1>قصص وسيَر</h1><p>مساحة هادية للقراءة والتأمل</p>' +
+        '<button class="st-exit big" onclick="closeStories()">🏠 العودة لموقع المذاكرة</button></div><div class="st-grid">';
+    ST_SECTIONS.forEach(function(s) {
+        h += '<div class="st-card" onclick="stGo(\'list\',\'' + s.id + '\')"><div class="st-ic">' + s.icon + '</div><h3>' + esc(s.name) + '</h3><p>' + esc(s.desc) + '</p></div>';
+    });
+    box.innerHTML = h + '</div>';
+}
+
+async function stLoad(sec, force) {
+    const key = 'st_' + sec;
+    if (!force) { const c = cacheGet(key); if (c) return c; }
+    try {
+        const snap = await getDocs(query(collection(db, 'stories'), where('sectionId', '==', sec)));
+        const arr = [];
+        snap.forEach(function(d) { arr.push(Object.assign({ id: d.id }, d.data())); });
+        arr.sort(function(a, b) { return (a.order || 0) - (b.order || 0); });
+        cacheSet(key, arr);
+        return arr;
+    } catch (e) {
+        console.error(e);
+        return cacheStale(key) || [];
+    }
+}
+
+async function stListView(box, sec) {
+    const s = stSecOf(sec);
+    box.innerHTML = stBar("stGo('home')", s.name) + '<div class="st-wrap"><p class="gen-note">جاري التحميل...</p></div>';
+    stList = await stLoad(sec);
+    if (stView.v !== 'list' || stView.sec !== sec) return;
+    let h = stBar("stGo('home')", s.name) + '<div class="st-wrap">';
+    if (currentUser && currentUser.isAdmin) h += '<button class="st-add" onclick="stEdit(null)">➕ إضافة قصة</button>';
+    if (!stList.length) h += '<p class="st-empty">لسه مفيش محتوى هنا. قريبًا بإذن الله 🌿</p>';
+    stList.forEach(function(x, i) {
+        h += '<div class="st-item" onclick="stGo(\'read\',\'' + sec + '\',\'' + esc(x.id) + '\')"><span class="st-num">' + (i + 1) + '</span><span class="st-it">' + esc(x.title) + '</span><span class="st-arrow">‹</span></div>';
+    });
+    box.innerHTML = h + '</div>';
+}
+
+function stInline(t) {
+    return esc(t).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
+}
+
+function stBodyHtml(text) {
+    const lines = String(text || '').replace(/\r/g, '').split('\n');
+    let h = '', ul = false, para = [];
+    const fp = function() { if (para.length) { h += '<p>' + stInline(para.join(' ')) + '</p>'; para = []; } };
+    const fu = function() { if (ul) { h += '</ul>'; ul = false; } };
+    lines.forEach(function(raw) {
+        const l = raw.trim();
+        let m;
+        if (!l) { fp(); fu(); return; }
+        if (l === '---') { fp(); fu(); h += '<hr>'; return; }
+        if ((m = l.match(/^(#{2,3})\s+(.*)$/))) { fp(); fu(); h += '<h' + m[1].length + '>' + stInline(m[2]) + '</h' + m[1].length + '>'; return; }
+        if ((m = l.match(/^#\s+(.*)$/))) { fp(); fu(); h += '<h2>' + stInline(m[1]) + '</h2>'; return; }
+        if ((m = l.match(/^[-•*]\s+(.*)$/))) { fp(); if (!ul) { h += '<ul>'; ul = true; } h += '<li>' + stInline(m[1]) + '</li>'; return; }
+        if ((m = l.match(/^>\s*(.*)$/))) { fp(); fu(); h += '<blockquote>' + stInline(m[1]) + '</blockquote>'; return; }
+        fu(); para.push(l);
+    });
+    fp(); fu();
+    return h;
+}
+
+async function stRead(box, sec, id) {
+    let x = stList.filter(function(s) { return s.id === id; })[0];
+    if (!x) { stList = await stLoad(sec); x = stList.filter(function(s) { return s.id === id; })[0]; }
+    if (!x) { stGo('list', sec); return; }
+    stView.story = x;
+    let h = stBar("stGo('list','" + sec + "')", stSecOf(sec).name) + '<div class="st-wrap">';
+    h += '<div class="st-read-tools"><button onclick="stFontStep(-0.1)">A−</button><button onclick="stFontStep(0.1)">A+</button>';
+    if (currentUser && currentUser.isAdmin) h += '<button onclick="stEdit(\'' + esc(x.id) + '\')">✏️ تعديل</button><button class="danger" onclick="stDelete(\'' + esc(x.id) + '\')">🗑 حذف</button>';
+    h += '</div><article class="st-article" style="font-size:' + stFont() + 'rem"><h1>' + esc(x.title) + '</h1>' + stBodyHtml(x.body);
+    (x.images || []).forEach(function(im) {
+        h += '<img class="st-img" draggable="false" src="' + esc(im.data) + '" alt="">';
+    });
+    if (x.links && x.links.length) {
+        h += '<div class="st-links">';
+        x.links.forEach(function(l) { h += '<a href="' + esc(l.url) + '" target="_blank" rel="noopener noreferrer">🔗 ' + esc(l.name) + '</a>'; });
+        h += '</div>';
+    }
+    h += '</article>';
+    const i = stList.indexOf(x);
+    h += '<div class="st-nav">';
+    if (stList[i + 1]) h += '<button onclick="stGo(\'read\',\'' + sec + '\',\'' + esc(stList[i + 1].id) + '\')">التالية ←</button>';
+    if (i > 0) h += '<button onclick="stGo(\'read\',\'' + sec + '\',\'' + esc(stList[i - 1].id) + '\')">→ السابقة</button>';
+    box.innerHTML = h + '</div></div>';
+}
+
+function stFontStep(d) {
+    const f = Math.min(1.8, Math.max(0.9, stFont() + d));
+    lsSet('kh_st_font', f);
+    const a = document.querySelector('.st-article');
+    if (a) a.style.fontSize = f + 'rem';
+}
+
+// ---------- الإضافة والتعديل (للأدمن) ----------
+function stEdit(id) {
+    if (!currentUser || !currentUser.isAdmin) return;
+    const x = id ? stList.filter(function(s) { return s.id === id; })[0] : null;
+    stEditing = x || null;
+    const links = x ? (x.links || []).map(function(l) { return l.name + ' | ' + l.url; }).join('\n') : '';
+    let imgs = '';
+    if (x && x.images && x.images.length) {
+        imgs = '<p class="gen-note">الصور الحالية (علّم اللي عايز تحذفه):</p>';
+        x.images.forEach(function(im, i) {
+            imgs += '<label class="st-keep"><input type="checkbox" class="st-del-img" value="' + i + '"> <img src="' + esc(im.data) + '" alt=""> حذف</label>';
+        });
+    }
+    genModal(x ? 'تعديل القصة' : 'إضافة قصة',
+        '<input id="st-title" class="sm-in" placeholder="عنوان القصة" value="' + esc(x ? x.title : '') + '">' +
+        '<p class="gen-note">التنسيق: <b>##</b> عنوان، <b>-</b> نقطة، <b>&gt;</b> آية/حديث في صندوق، <b>---</b> فاصل، <b>**كلمة**</b> للتغليظ.</p>' +
+        '<textarea id="st-text" rows="12" class="sm-in" placeholder="اكتب القصة هنا...">' + esc(x ? x.body : '') + '</textarea>' +
+        imgs +
+        '<p class="gen-note">إضافة صور:</p><input type="file" id="st-files" accept="image/*" multiple>' +
+        '<p class="gen-note">روابط (كل رابط في سطر بالشكل: الاسم | الرابط):</p>' +
+        '<textarea id="st-links" rows="3" class="sm-in" dir="ltr">' + esc(links) + '</textarea>' +
+        '<button class="btn-submit" id="st-save" style="margin-top:.6rem" onclick="stSave()">حفظ</button>');
+}
+
+async function stSave() {
+    if (stSaving || !currentUser || !currentUser.isAdmin) return;
+    const title = $('st-title').value.trim();
+    if (!title) { alert('اكتب عنوان القصة'); return; }
+    stSaving = true;
+    const btn = $('st-save');
+    btn.disabled = true; btn.innerText = 'جاري الحفظ...';
+    try {
+        const old = stEditing;
+        let images = old ? (old.images || []).slice() : [];
+        const del = Array.prototype.map.call(document.querySelectorAll('.st-del-img:checked'), function(c) { return +c.value; });
+        images = images.filter(function(_, i) { return del.indexOf(i) === -1; });
+        const files = $('st-files').files;
+        for (let i = 0; i < files.length; i++) {
+            btn.innerText = 'رفع صورة ' + (i + 1) + ' من ' + files.length + '...';
+            images.push({ name: files[i].name, data: await uploadToCloudinary(files[i]) });
+        }
+        const links = [];
+        $('st-links').value.split('\n').forEach(function(l) {
+            const p = l.split('|');
+            if (p.length >= 2 && /^https?:\/\//i.test(p.slice(1).join('|').trim())) links.push({ name: p[0].trim() || 'رابط', url: p.slice(1).join('|').trim() });
+        });
+        const now = Date.now();
+        const id = old ? old.id : String(now);
+        const sec = stView.sec;
+        const doc_ = { sectionId: sec, title: title, body: $('st-text').value, images: images, links: links, order: old ? (old.order || now) : now, createdAt: old ? (old.createdAt || now) : now };
+        await setDoc(doc(db, 'stories', id), doc_);
+        try { localStorage.removeItem('kh_cache_st_' + sec); } catch (e) {}
+        closeModal('gen-modal');
+        stList = await stLoad(sec, true);
+        stGo('list', sec);
+        toast('تم الحفظ ✅');
+    } catch (e) {
+        console.error(e);
+        alert('تعذر الحفظ: ' + (e && e.message ? e.message : e));
+    }
+    stSaving = false;
+    if (btn) { btn.disabled = false; btn.innerText = 'حفظ'; }
+}
+
+async function stDelete(id) {
+    if (!currentUser || !currentUser.isAdmin) return;
+    if (!confirm('حذف القصة نهائيًا؟')) return;
+    try {
+        await deleteDoc(doc(db, 'stories', id));
+        const sec = stView.sec;
+        try { localStorage.removeItem('kh_cache_st_' + sec); } catch (e) {}
+        stList = await stLoad(sec, true);
+        stGo('list', sec);
+    } catch (e) { alert('تعذر الحذف: ' + (e && e.message ? e.message : e)); }
+}
+
+window.openStories = openStories;
+window.closeStories = closeStories;
+window.stGo = stGo;
+window.stEdit = stEdit;
+window.stSave = stSave;
+window.stDelete = stDelete;
+window.stFontStep = stFontStep;
+
 window.viewMedia = viewMedia;
 window.goBackToSubject = goBackToSubject;
 window.renderQuizzes = renderQuizzes;
