@@ -1540,3 +1540,21 @@ body.eye::after { content: ""; position: fixed; inset: 0; background: rgba(255, 
 .st-nav{display:flex;justify-content:space-between;gap:.5rem;margin-top:1.2rem}
 .st-keep{display:flex;align-items:center;gap:.5rem;margin:.3rem 0}
 .st-keep img{width:60px;height:60px;object-fit:cover;border-radius:8px}
+
+.st-tb{display:flex;flex-wrap:wrap;gap:.4rem;margin:.6rem 0}
+.st-tb button{background:var(--card-bg);color:var(--text-main);border:1px solid var(--card-border);border-radius:8px;padding:.35rem .7rem;font-family:inherit;cursor:pointer;font-size:.85rem}
+.st-editor{min-height:220px;max-height:45vh;overflow-y:auto;padding:.8rem;border-radius:10px;border:1px solid var(--card-border);background:var(--card-bg);color:var(--text-main);line-height:1.9;outline:none}
+.st-editor:empty::before{content:attr(data-ph);opacity:.5}
+.st-editor h2{color:var(--primary-gold);font-size:1.25rem;margin:.6rem 0}
+.st-editor h3{color:var(--primary-gold);font-size:1.1rem;margin:.5rem 0}
+.st-editor blockquote{border-right:4px solid var(--primary-gold);padding:.4rem .8rem;background:rgba(230,195,106,.12);border-radius:6px;margin:.5rem 0}
+.st-editor ul{padding-right:1.4rem}
+
+/* مشغل القرآن */
+#quran-player{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);width:min(94vw,430px);z-index:950;align-items:center;gap:.4rem;padding:.5rem .7rem;border-radius:16px;background:rgba(22,10,45,.96);border:1px solid rgba(240,189,104,.5);box-shadow:0 6px 24px rgba(0,0,0,.5);direction:rtl}
+#quran-player button{background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:50%;width:36px;height:36px;font-size:1rem;cursor:pointer;flex-shrink:0}
+#quran-player #quran-toggle{background:#f0bd68;color:#1a0b33;width:42px;height:42px}
+#quran-player .q-mid{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+#quran-player #quran-name{color:#f0bd68;font-weight:700;font-size:.85rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#quran-player select{background:rgba(255,255,255,.08);color:#fff;border:1px solid rgba(255,255,255,.2);border-radius:8px;padding:.15rem;font-family:inherit;font-size:.8rem;width:100%}
+#quran-player select option{color:#000}

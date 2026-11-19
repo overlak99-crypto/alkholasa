@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getFirestore, collection, getDocs, getDoc, deleteDoc, doc, setDoc, query, where, getCountFromServer, onSnapshot, increment } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, sendPasswordResetEmail, updateProfile, sendEmailVerification } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, sendPasswordResetEmail, updateProfile, sendEmailVerification, EmailAuthProvider, reauthenticateWithCredential, updatePassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDZAkAzFsmwPYgTBefkr6Cdz5ZZBrEHwWo",
@@ -227,6 +227,7 @@ function showPage(pageId) {
         openAuthModal();
         return;
     }
+    if (currentUser.isStoryEditor) { if ($('stories-app').style.display !== 'block') openStories(); return; }
     if (pageId !== 'quiz-solve') stopQuizTimer();
     if (siteDisabled && !currentUser.isAdmin) return;
     if (pageId === 'summarymaker' && !currentUser.isAdmin) return;
@@ -290,6 +291,10 @@ function toggleTheme() {
 //  الحسابات (Firebase Authentication)
 // ==========================================================
 const ADMIN_EMAILS = ['admin@alkholasa.com'];
+// حساب/حسابات كاتب القصص: بتدخل على قسم القصص بس وتقدر تضيف وتعدل فيه (لازم نفس الإيميل يتحط في قواعد Firestore)
+const STORY_EDITORS = ['stories@alkholasa.com'];
+function isStoryEditor() { return !!(currentUser && currentUser.isStoryEditor); }
+function canEditStories() { return !!(currentUser && (currentUser.isAdmin || currentUser.isStoryEditor)); }
 let authMode = 'login';
 let authBusy = false;
 let firstAuthCheck = true;
@@ -325,7 +330,8 @@ function authErrorText(e) {
         'auth/too-many-requests': 'محاولات كثيرة، انتظر قليلاً ثم أعد المحاولة.',
         'auth/network-request-failed': 'مشكلة في الاتصال بالإنترنت.',
         'auth/operation-not-allowed': 'تسجيل الدخول بالبريد غير مفعّل في Firebase. فعّل Email/Password من لوحة Firebase.',
-        'auth/missing-password': 'اكتب كلمة المرور.'
+        'auth/missing-password': 'اكتب كلمة المرور.',
+        'auth/requires-recent-login': 'من فضلك سجّل خروج وادخل تاني وبعدين غيّر كلمة المرور.'
     };
     return map[e && e.code] || ('حدث خطأ: ' + (e && e.message ? e.message : 'غير معروف'));
 }
@@ -372,13 +378,18 @@ async function handleAuth() {
             return;
         }
         applyUser(cred.user, name);
-        initProfile();
         closeModal('auth-modal');
         setAuthMsg('', false);
         document.getElementById('auth-pass').value = '';
         document.getElementById('auth-pass2').value = '';
-        showPage('home');
-        showVerse(true);
+        if (currentUser.isStoryEditor) {
+            openStories();
+            stGo('list', 'seera');
+        } else {
+            initProfile();
+            showPage('home');
+            showVerse(true);
+        }
     } catch (e) {
         setAuthMsg(authErrorText(e), false);
     }
@@ -404,7 +415,8 @@ function applyUser(user, nameOverride) {
         uid: user.uid,
         email: email,
         name: nameOverride || pendingName || user.displayName || email.split('@')[0],
-        isAdmin: ADMIN_EMAILS.indexOf(email.toLowerCase()) !== -1
+        isAdmin: ADMIN_EMAILS.indexOf(email.toLowerCase()) !== -1,
+        isStoryEditor: STORY_EDITORS.indexOf(email.toLowerCase()) !== -1
     };
     updateUIForAuth();
 }
@@ -422,6 +434,12 @@ onAuthStateChanged(auth, function(user) {
         $('verify-modal').style.display = 'none';
         closeModal('auth-modal');
         applyUser(user);
+        if (currentUser.isStoryEditor) {
+            openStories();
+            stGo('list', 'seera');
+            firstAuthCheck = false;
+            return;
+        }
         if (!authBusy) initProfile();
         if (firstAuthCheck) {
             showPage('home');
@@ -430,6 +448,8 @@ onAuthStateChanged(auth, function(user) {
     } else {
         currentUser = null;
         profile = null;
+        closeStories();
+        stopQuran();
         updateUIForAuth();
         openAuthModal();
     }
@@ -506,6 +526,7 @@ function showVerse(force) {
 function closeVerse() {
     const m = document.getElementById('verse-modal');
     if (m) m.style.display = 'none';
+    offerQuran();
 }
 
 // ==========================================================
@@ -2289,9 +2310,50 @@ function renderAccount() {
     el.innerHTML = h + accountExtras();
 }
 
+// ---------- تغيير كلمة المرور ----------
+function openChangePassword() {
+    if (!currentUser) return;
+    genModal('🔑 تغيير كلمة المرور',
+        '<input type="password" id="cp-old" class="sm-in" placeholder="كلمة المرور الحالية" autocomplete="current-password">' +
+        '<input type="password" id="cp-new" class="sm-in" placeholder="كلمة المرور الجديدة (6 أحرف أو أرقام على الأقل)" autocomplete="new-password" style="margin-top:.5rem">' +
+        '<input type="password" id="cp-new2" class="sm-in" placeholder="تأكيد كلمة المرور الجديدة" autocomplete="new-password" style="margin-top:.5rem">' +
+        '<p id="cp-msg" class="gen-note" style="min-height:1.2rem;margin-top:.4rem"></p>' +
+        '<button class="btn-submit" id="cp-save" style="margin-top:.4rem" onclick="doChangePassword()">تغيير كلمة المرور</button>');
+}
+
+let cpBusy = false;
+async function doChangePassword() {
+    if (cpBusy) return;
+    const msg = function(t, ok) { const m = $('cp-msg'); m.innerText = t; m.style.color = ok ? '#7be0a0' : '#ff9b9b'; };
+    const oldP = $('cp-old').value, n1 = $('cp-new').value, n2 = $('cp-new2').value;
+    const u = auth.currentUser;
+    if (!u || !u.email) { msg('سجّل الدخول الأول.', false); return; }
+    if (!oldP) { msg('اكتب كلمة المرور الحالية.', false); return; }
+    if (n1.length < 6) { msg('كلمة المرور الجديدة لازم 6 أحرف أو أرقام على الأقل.', false); return; }
+    if (n1 !== n2) { msg('تأكيد كلمة المرور مش مطابق.', false); return; }
+    if (n1 === oldP) { msg('كلمة المرور الجديدة لازم تختلف عن الحالية.', false); return; }
+    cpBusy = true;
+    const b = $('cp-save'); b.disabled = true; b.innerText = 'جاري التغيير...';
+    try {
+        await reauthenticateWithCredential(u, EmailAuthProvider.credential(u.email, oldP));
+        await updatePassword(u, n1);
+        $('cp-old').value = ''; $('cp-new').value = ''; $('cp-new2').value = '';
+        msg('تم تغيير كلمة المرور بنجاح ✅ استخدم الجديدة في الدخول من دلوقتي.', true);
+        toast('تم تغيير كلمة المرور ✅');
+    } catch (e) {
+        const wrong = e && (e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential');
+        msg(wrong ? 'كلمة المرور الحالية غلط.' : authErrorText(e), false);
+    }
+    cpBusy = false;
+    b.disabled = false; b.innerText = 'تغيير كلمة المرور';
+}
+window.openChangePassword = openChangePassword;
+window.doChangePassword = doChangePassword;
+
 function accountExtras() {
     return '<div class="acc-card"><h3>🎨 المظهر</h3><div class="acc-btns"><button class="btn-track-secondary" onclick="togglePalPanel()">اختيار الألوان</button>' +
         '<button class="btn-track-secondary" onclick="toggleEye()">👁 وضع راحة للعين</button>' +
+        '<button class="btn-track-secondary" onclick="openChangePassword()">🔑 تغيير كلمة المرور</button>' +
         (deferredInstall ? '<button class="btn-track-secondary" onclick="installApp()">📲 تثبيت الموقع كتطبيق</button>' : '') +
         '<button class="btn-track-secondary" onclick="logout()">تسجيل الخروج</button></div></div>';
 }
@@ -2318,7 +2380,7 @@ window.addEventListener('beforeinstallprompt', function(e) { e.preventDefault();
 // ---------- تأكيد الإيميل ----------
 function needsVerify(user) {
     const email = (user.email || '').toLowerCase();
-    if (ADMIN_EMAILS.indexOf(email) !== -1) return false;
+    if (ADMIN_EMAILS.indexOf(email) !== -1 || STORY_EDITORS.indexOf(email) !== -1) return false;
     if (user.emailVerified) return false;
     const ct = Date.parse(user.metadata && user.metadata.creationTime) || 0;
     return ct >= VERIFY_FROM;
@@ -3219,6 +3281,110 @@ window.smDownload = smDownload;
 window.smSample = smSample;
 window.smClear = smClear;
 
+
+// ==========================================================
+//  القرآن الكريم أثناء المذاكرة (الشيخ ياسر الدوسري)
+// ==========================================================
+const QURAN_BASE = 'https://server11.mp3quran.net/yasser/';
+const QURAN_LIST = [
+    { n: 1, t: 'الفاتحة' }, { n: 2, t: 'البقرة' }, { n: 3, t: 'آل عمران' }, { n: 23, t: 'المؤمنون' },
+    { n: 18, t: 'الكهف' }, { n: 36, t: 'يس' }, { n: 55, t: 'الرحمن' }, { n: 56, t: 'الواقعة' },
+    { n: 67, t: 'الملك' }, { n: 112, t: 'الإخلاص' }, { n: 113, t: 'الفلق' }, { n: 114, t: 'الناس' }
+];
+let qAudio = null;
+let qIdx = 0;
+let qFails = 0;
+
+function qUrl(i) { return QURAN_BASE + ('00' + QURAN_LIST[i].n).slice(-3) + '.mp3'; }
+
+function qEnsure() {
+    if (qAudio) return;
+    qAudio = new Audio();
+    qAudio.preload = 'none';
+    qAudio.addEventListener('ended', function() { qFails = 0; quranStep(1); });
+    qAudio.addEventListener('play', qSync);
+    qAudio.addEventListener('pause', qSync);
+    qAudio.addEventListener('error', function() {
+        qFails++;
+        if (qFails >= QURAN_LIST.length) { toast('تعذر تشغيل القرآن دلوقتي، جرّب بعدين'); qFails = 0; qSync(); return; }
+        toast('تعذر تشغيل السورة، هنجرّب اللي بعدها');
+        quranStep(1);
+    });
+    const sel = $('quran-sel');
+    sel.innerHTML = QURAN_LIST.map(function(x, i) { return '<option value="' + i + '">' + x.t + '</option>'; }).join('');
+    if ('mediaSession' in navigator) {
+        try {
+            navigator.mediaSession.setActionHandler('play', function() { qAudio.play(); });
+            navigator.mediaSession.setActionHandler('pause', function() { qAudio.pause(); });
+            navigator.mediaSession.setActionHandler('nexttrack', function() { quranStep(1); });
+            navigator.mediaSession.setActionHandler('previoustrack', function() { quranStep(-1); });
+        } catch (e) {}
+    }
+}
+
+function qSync() {
+    const b = $('quran-toggle');
+    if (b) b.innerText = (qAudio && !qAudio.paused) ? '⏸' : '▶';
+}
+
+function quranLoad(i, play) {
+    qEnsure();
+    qIdx = ((i % QURAN_LIST.length) + QURAN_LIST.length) % QURAN_LIST.length;
+    qAudio.src = qUrl(qIdx);
+    $('quran-sel').value = String(qIdx);
+    $('quran-name').innerText = 'سورة ' + QURAN_LIST[qIdx].t;
+    lsSet('kh_quran_idx', qIdx);
+    if ('mediaSession' in navigator && window.MediaMetadata) {
+        try { navigator.mediaSession.metadata = new MediaMetadata({ title: 'سورة ' + QURAN_LIST[qIdx].t, artist: 'ياسر الدوسري', album: 'الخلاصة | Top Notes' }); } catch (e) {}
+    }
+    $('quran-player').style.display = 'flex';
+    if (play) { const p = qAudio.play(); if (p && p.catch) p.catch(function() { qSync(); }); }
+    qSync();
+}
+
+function quranStep(d) { quranLoad(qIdx + d, true); }
+
+function quranToggle() {
+    qEnsure();
+    if (!qAudio.src) { quranLoad(lsGet('kh_quran_idx', 0), true); return; }
+    if (qAudio.paused) qAudio.play(); else qAudio.pause();
+}
+
+function quranPick(v) { quranLoad(parseInt(v, 10) || 0, true); }
+
+function openQuran() {
+    closeModal('quran-offer');
+    qEnsure();
+    if (!qAudio.src) quranLoad(lsGet('kh_quran_idx', 0), true);
+    else { $('quran-player').style.display = 'flex'; if (qAudio.paused) qAudio.play(); }
+}
+
+function stopQuran() {
+    if (qAudio) { qAudio.pause(); qAudio.removeAttribute('src'); qAudio.load(); }
+    const p = $('quran-player');
+    if (p) p.style.display = 'none';
+    qSync();
+}
+
+function offerQuran() {
+    if (!currentUser || currentUser.isStoryEditor) return;
+    if (qAudio && qAudio.src && !qAudio.paused) return;
+    if (lsGet('kh_quran_skip', '') === todayKey()) return;
+    $('quran-offer').style.display = 'flex';
+}
+
+function skipQuran() {
+    lsSet('kh_quran_skip', todayKey());
+    closeModal('quran-offer');
+}
+
+window.openQuran = openQuran;
+window.stopQuran = stopQuran;
+window.skipQuran = skipQuran;
+window.quranStep = quranStep;
+window.quranToggle = quranToggle;
+window.quranPick = quranPick;
+
 // ==========================================================
 //  قسم القصص والسير (مساحة مستقلة)
 // ==========================================================
@@ -3239,7 +3405,7 @@ function stFont() { return lsGet('kh_st_font', 1.15); }
 
 function openStories() {
     if (!currentUser) { openAuthModal(); return; }
-    if (siteDisabled && !currentUser.isAdmin) return;
+    if (siteDisabled && !canEditStories()) return;
     $('stories-app').style.display = 'block';
     document.body.style.overflow = 'hidden';
     stGo('home');
@@ -3255,7 +3421,7 @@ function stBar(backFn, title) {
     return '<div class="st-bar">' +
         '<button class="st-back" onclick="' + backFn + '">→ رجوع</button>' +
         '<div class="st-bar-title">' + esc(title) + '</div>' +
-        '<button class="st-exit" onclick="closeStories()">🏠 موقع المذاكرة</button></div>';
+        (isStoryEditor() ? '<button class="st-exit" onclick="openChangePassword()">🔑</button><button class="st-exit" onclick="logout()">خروج</button>' : '<button class="st-exit" onclick="closeStories()">🏠 موقع المذاكرة</button>') + '</div>';
 }
 
 function stGo(v, a, b) {
@@ -3268,7 +3434,7 @@ function stGo(v, a, b) {
 
 function stHome(box) {
     let h = '<div class="st-hero"><div class="st-moon">🌙</div><h1>قصص وسيَر</h1><p>مساحة هادية للقراءة والتأمل</p>' +
-        '<button class="st-exit big" onclick="closeStories()">🏠 العودة لموقع المذاكرة</button></div><div class="st-grid">';
+        (isStoryEditor() ? '<button class="st-exit big" onclick="logout()">خروج</button>' : '<button class="st-exit big" onclick="closeStories()">🏠 العودة لموقع المذاكرة</button>') + '</div><div class="st-grid">';
     ST_SECTIONS.forEach(function(s) {
         h += '<div class="st-card" onclick="stGo(\'list\',\'' + s.id + '\')"><div class="st-ic">' + s.icon + '</div><h3>' + esc(s.name) + '</h3><p>' + esc(s.desc) + '</p></div>';
     });
@@ -3297,7 +3463,7 @@ async function stListView(box, sec) {
     stList = await stLoad(sec);
     if (stView.v !== 'list' || stView.sec !== sec) return;
     let h = stBar("stGo('home')", s.name) + '<div class="st-wrap">';
-    if (currentUser && currentUser.isAdmin) h += '<button class="st-add" onclick="stEdit(null)">➕ إضافة قصة</button>';
+    if (canEditStories()) h += '<button class="st-add" onclick="stEdit(null)">➕ إضافة قصة</button>';
     if (!stList.length) h += '<p class="st-empty">لسه مفيش محتوى هنا. قريبًا بإذن الله 🌿</p>';
     stList.forEach(function(x, i) {
         h += '<div class="st-item" onclick="stGo(\'read\',\'' + sec + '\',\'' + esc(x.id) + '\')"><span class="st-num">' + (i + 1) + '</span><span class="st-it">' + esc(x.title) + '</span><span class="st-arrow">‹</span></div>';
@@ -3336,8 +3502,8 @@ async function stRead(box, sec, id) {
     stView.story = x;
     let h = stBar("stGo('list','" + sec + "')", stSecOf(sec).name) + '<div class="st-wrap">';
     h += '<div class="st-read-tools"><button onclick="stFontStep(-0.1)">A−</button><button onclick="stFontStep(0.1)">A+</button>';
-    if (currentUser && currentUser.isAdmin) h += '<button onclick="stEdit(\'' + esc(x.id) + '\')">✏️ تعديل</button><button class="danger" onclick="stDelete(\'' + esc(x.id) + '\')">🗑 حذف</button>';
-    h += '</div><article class="st-article" style="font-size:' + stFont() + 'rem"><h1>' + esc(x.title) + '</h1>' + stBodyHtml(x.body);
+    if (canEditStories()) h += '<button onclick="stEdit(\'' + esc(x.id) + '\')">✏️ تعديل</button><button class="danger" onclick="stDelete(\'' + esc(x.id) + '\')">🗑 حذف</button>';
+    h += '</div><article class="st-article" style="font-size:' + stFont() + 'rem"><h1>' + esc(x.title) + '</h1>' + stCleanHtml(x.html || stBodyHtml(x.body));
     (x.images || []).forEach(function(im) {
         h += '<img class="st-img" draggable="false" src="' + esc(im.data) + '" alt="">';
     });
@@ -3361,9 +3527,54 @@ function stFontStep(d) {
     if (a) a.style.fontSize = f + 'rem';
 }
 
+
+// ---------- محرر القصص (من غير علامات) ----------
+function stCleanHtml(html) {
+    const doc_ = new DOMParser().parseFromString('<div id="r">' + String(html || '') + '</div>', 'text/html');
+    const MAP = { H1: 'h2', H2: 'h2', H3: 'h3', H4: 'h3', B: 'b', STRONG: 'b', UL: 'ul', OL: 'ul', LI: 'li', BLOCKQUOTE: 'blockquote', P: 'p', DIV: 'p', BR: 'br', HR: 'hr' };
+    function walk(n) {
+        let out = '';
+        n.childNodes.forEach(function(c) {
+            if (c.nodeType === 3) { out += esc(c.nodeValue); return; }
+            if (c.nodeType !== 1) return;
+            const t = MAP[c.tagName];
+            if (!t) { out += walk(c); return; }
+            if (t === 'br' || t === 'hr') { out += '<' + t + '>'; return; }
+            const inner = walk(c);
+            if (!inner.replace(/<br>/g, '').trim() && t !== 'li') return;
+            out += '<' + t + '>' + inner + '</' + t + '>';
+        });
+        return out;
+    }
+    return walk(doc_.getElementById('r'));
+}
+
+function stFmt(kind) {
+    const ed = $('st-editor');
+    if (!ed) return;
+    ed.focus();
+    const cur = String(document.queryCommandValue('formatBlock') || '').toLowerCase().replace(/[<>]/g, '');
+    if (kind === 'bold') document.execCommand('bold');
+    else if (kind === 'ul') document.execCommand('insertUnorderedList');
+    else if (kind === 'p') { document.execCommand('formatBlock', false, 'p'); }
+    else {
+        const tag = kind === 'quote' ? 'blockquote' : kind;
+        document.execCommand('formatBlock', false, cur === tag ? 'p' : tag);
+    }
+}
+
+document.addEventListener('paste', function(e) {
+    const ed = $('st-editor');
+    if (!ed || !ed.contains(e.target)) return;
+    e.preventDefault();
+    const t = (e.clipboardData || window.clipboardData).getData('text/plain') || '';
+    const html = t.replace(/\r/g, '').split('\n').filter(function(l) { return l.trim(); }).map(function(l) { return '<p>' + esc(l.trim()) + '</p>'; }).join('');
+    document.execCommand('insertHTML', false, html);
+});
+
 // ---------- الإضافة والتعديل (للأدمن) ----------
 function stEdit(id) {
-    if (!currentUser || !currentUser.isAdmin) return;
+    if (!canEditStories()) return;
     const x = id ? stList.filter(function(s) { return s.id === id; })[0] : null;
     stEditing = x || null;
     const links = x ? (x.links || []).map(function(l) { return l.name + ' | ' + l.url; }).join('\n') : '';
@@ -3376,8 +3587,15 @@ function stEdit(id) {
     }
     genModal(x ? 'تعديل القصة' : 'إضافة قصة',
         '<input id="st-title" class="sm-in" placeholder="عنوان القصة" value="' + esc(x ? x.title : '') + '">' +
-        '<p class="gen-note">التنسيق: <b>##</b> عنوان، <b>-</b> نقطة، <b>&gt;</b> آية/حديث في صندوق، <b>---</b> فاصل، <b>**كلمة**</b> للتغليظ.</p>' +
-        '<textarea id="st-text" rows="12" class="sm-in" placeholder="اكتب القصة هنا...">' + esc(x ? x.body : '') + '</textarea>' +
+        '<div class="st-tb">' +
+            '<button type="button" onpointerdown="event.preventDefault()" onclick="stFmt(\'h2\')">عنوان</button>' +
+            '<button type="button" onpointerdown="event.preventDefault()" onclick="stFmt(\'h3\')">عنوان فرعي</button>' +
+            '<button type="button" onpointerdown="event.preventDefault()" onclick="stFmt(\'bold\')"><b>غامق</b></button>' +
+            '<button type="button" onpointerdown="event.preventDefault()" onclick="stFmt(\'ul\')">• نقاط</button>' +
+            '<button type="button" onpointerdown="event.preventDefault()" onclick="stFmt(\'quote\')">❝ آية/حديث</button>' +
+            '<button type="button" onpointerdown="event.preventDefault()" onclick="stFmt(\'p\')">نص عادي</button>' +
+        '</div>' +
+        '<div id="st-editor" class="st-editor" contenteditable="true" dir="rtl" data-ph="اكتب القصة هنا... (حدد الكلام واضغط على الزرار اللي فوق لو عايز تنسقه)">' + (x ? stCleanHtml(x.html || stBodyHtml(x.body)) : '') + '</div>' +
         imgs +
         '<p class="gen-note">إضافة صور:</p><input type="file" id="st-files" accept="image/*" multiple>' +
         '<p class="gen-note">روابط (كل رابط في سطر بالشكل: الاسم | الرابط):</p>' +
@@ -3386,7 +3604,7 @@ function stEdit(id) {
 }
 
 async function stSave() {
-    if (stSaving || !currentUser || !currentUser.isAdmin) return;
+    if (stSaving || !canEditStories()) return;
     const title = $('st-title').value.trim();
     if (!title) { alert('اكتب عنوان القصة'); return; }
     stSaving = true;
@@ -3410,7 +3628,7 @@ async function stSave() {
         const now = Date.now();
         const id = old ? old.id : String(now);
         const sec = stView.sec;
-        const doc_ = { sectionId: sec, title: title, body: $('st-text').value, images: images, links: links, order: old ? (old.order || now) : now, createdAt: old ? (old.createdAt || now) : now };
+        const doc_ = { sectionId: sec, title: title, body: '', html: stCleanHtml($('st-editor').innerHTML), images: images, links: links, order: old ? (old.order || now) : now, createdAt: old ? (old.createdAt || now) : now };
         await setDoc(doc(db, 'stories', id), doc_);
         try { localStorage.removeItem('kh_cache_st_' + sec); } catch (e) {}
         closeModal('gen-modal');
@@ -3426,7 +3644,7 @@ async function stSave() {
 }
 
 async function stDelete(id) {
-    if (!currentUser || !currentUser.isAdmin) return;
+    if (!canEditStories()) return;
     if (!confirm('حذف القصة نهائيًا؟')) return;
     try {
         await deleteDoc(doc(db, 'stories', id));
@@ -3444,6 +3662,7 @@ window.stEdit = stEdit;
 window.stSave = stSave;
 window.stDelete = stDelete;
 window.stFontStep = stFontStep;
+window.stFmt = stFmt;
 
 window.viewMedia = viewMedia;
 window.goBackToSubject = goBackToSubject;

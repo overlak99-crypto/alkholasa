@@ -146,6 +146,7 @@
                         <button class="btn-track-secondary" onclick="openReportsAdmin()"><i class="fa-solid fa-flag"></i> بلاغات الأسئلة</button>
                         <button class="btn-track-secondary" onclick="openAdminStats()"><i class="fa-solid fa-chart-column"></i> الإحصائيات</button>
                         <button class="btn-track-secondary" onclick="showPage('summarymaker')"><i class="fa-solid fa-file-pdf"></i> صانع الملخصات</button>
+                        <button class="btn-track-secondary" onclick="openChangePassword()"><i class="fa-solid fa-key"></i> تغيير كلمة المرور</button>
                         <button class="btn-track-secondary" onclick="downloadBackup()"><i class="fa-solid fa-download"></i> نسخة احتياطية</button>
                     </div>
                 </div>  
@@ -182,6 +183,11 @@
                 <h3>امتحان حقيقي</h3>  
                 <p style="color:var(--text-muted); font-size:0.85rem; margin-top:0.3rem;">وقت صارم وأسئلة عشوائية</p>  
             </div>  
+            <div class="path-card" onclick="openQuran()">
+                <div class="path-icon"><i class="fa-solid fa-headphones"></i></div>
+                <h3>القرآن أثناء المذاكرة</h3>
+                <p style="color:var(--text-muted); font-size:0.85rem; margin-top:0.3rem;">بصوت الشيخ ياسر الدوسري</p>
+            </div>
             <div class="path-card" onclick="openStories()">
                 <div class="path-icon"><i class="fa-solid fa-moon"></i></div>
                 <h3>قصص وسيَر</h3>
@@ -344,7 +350,7 @@
             <div class="contact-card">  
                 <div class="contact-icon"><i class="fa-solid fa-code"></i></div>  
                 <h3>تصميم الموقع</h3>  
-                <h2 style="color:var(--primary-gold); margin:0.5rem 0;">زياد </h2>  
+                <h2 style="color:var(--primary-gold); margin:0.5rem 0;">زياد نادر جلال</h2>  
                 <p style="color:var(--text-muted); font-size:0.85rem;">تم تصميم وتطوير هذا الموقع بعناية ليكون سهل الاستخدام وأنيق المظهر لطلاب كلية التجارة.</p>  
             </div>  
             <div class="contact-card">  
@@ -590,6 +596,27 @@
         <div class="verse-ref" id="verse-ref"></div>
         <button class="btn-submit" onclick="closeVerse()">ادخل بسم الله</button>
     </div>
+</div>
+
+<div id="quran-offer" class="modal">
+    <div class="verse-card">
+        <div class="verse-orn"><i class="fa-solid fa-headphones"></i></div>
+        <div class="verse-title">عزيزي الطالب</div>
+        <div class="verse-text" style="font-size:1.15rem;">يمكنك سماع القرآن الكريم بصوت الشيخ ياسر الدوسري أثناء المذاكرة</div>
+        <div class="verse-ref" style="font-size:.75rem;">الصوت بيستهلك من باقة الإنترنت</div>
+        <div style="display:flex; gap:.6rem; justify-content:center; margin-top:.8rem;">
+            <button class="btn-submit" style="flex:1" onclick="openQuran()">▶ تشغيل</button>
+            <button class="btn-submit" style="flex:1; background:transparent; border:1px solid var(--card-border); color:var(--text-main);" onclick="skipQuran()">تجاهل</button>
+        </div>
+    </div>
+</div>
+
+<div id="quran-player" style="display:none;">
+    <button onclick="quranStep(-1)" aria-label="السابقة">⏮</button>
+    <button id="quran-toggle" onclick="quranToggle()" aria-label="تشغيل/إيقاف">▶</button>
+    <button onclick="quranStep(1)" aria-label="التالية">⏭</button>
+    <div class="q-mid"><span id="quran-name">القرآن الكريم</span><select id="quran-sel" onchange="quranPick(this.value)"></select></div>
+    <button onclick="stopQuran()" aria-label="إغلاق">✕</button>
 </div>
 
 <div id="stories-app" style="display:none;"><div id="stories-body"></div></div>
