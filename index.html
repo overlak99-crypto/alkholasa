@@ -16,7 +16,10 @@
 
 <!-- شاشة اللوجو -->
 <div id="splash">
-    <svg class="splash-svg" viewBox="0 0 300 230" fill="none" stroke="url(#sg)" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round">
+    <div class="spl-c spl-l"></div><div class="spl-c spl-r"></div>
+    <div class="spl-stage">
+        <div class="spl-halo"></div>
+        <svg class="splash-svg" viewBox="0 0 300 230" fill="none" stroke="url(#sg)" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round">
         <defs><linearGradient id="sg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffe2a3"/><stop offset=".5" stop-color="#f0bd68"/><stop offset="1" stop-color="#d4903a"/></linearGradient></defs>
         <circle class="sd d1" cx="150" cy="122" r="100"/>
         <path class="sd d2" d="M150 30 L250 68 L150 106 L50 68 Z"/>
@@ -26,9 +29,11 @@
         <path class="sd d4" d="M150 178 V200"/>
         <path class="sd d5" d="M262 158 C272 128 284 112 296 100 C292 132 280 152 258 176 Z"/>
     </svg>
-    <img class="splash-logo" src="logo.jpg" alt="الخلاصة Top Notes" onerror="this.style.display='none'; document.getElementById('splash-fb').style.display='block';">
-    <div id="splash-fb" class="splash-fb"><b>الخلاصة</b><span>Top Notes</span></div>
+        <div class="spl-logo-wrap"><img class="splash-logo" src="logo.jpg" alt="الخلاصة Top Notes" onerror="this.style.display='none'; document.getElementById('splash-fb').style.display='block';"></div>
+        <div id="splash-fb" class="splash-fb"><b>الخلاصة</b><span>Top Notes</span></div>
+    </div>
     <div class="splash-skip">اضغط للتخطي</div>
+    <div class="spl-bar"><i></i></div>
 </div>
 
 <!-- شاشة تعطيل الموقع -->
@@ -132,6 +137,7 @@
                     <div class="stat-label">إجمالي المحاضرات المرفوعة</div>  
                 </div>  
             </div>  
+            <div id="study-progress" class="pg-card" style="display:none"></div>
             <div class="action-buttons-stack">  
                 <button class="btn-track-primary" onclick="showPage('antizam')"><i class="fa-solid fa-graduation-cap"></i> قسم الانتظام</button>  
                 <button class="btn-track-secondary" onclick="showPage('antisab')"><i class="fa-solid fa-user-clock"></i> قسم الانتساب</button>  

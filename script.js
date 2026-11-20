@@ -211,6 +211,7 @@ function toggleStudied(id) {
         btn.innerText = on ? '✅ تمت مذاكرتها' : 'علّم كمتذاكرة ✓';
     }
     checkBadges();
+    renderStudyProgress();
 }
 
 function updateStats() {
@@ -220,7 +221,11 @@ function updateStats() {
     const lecCountEl = document.getElementById('stat-lectures-count');
     if (subCountEl) subCountEl.innerText = subjects.length;
     if (lecCountEl) lecCountEl.innerText = (lecturesCount === null ? '—' : lecturesCount);
+    renderStudyProgress();
 }
+
+const PAGE_DEPTH = { home: 0, 'subject-detail': 2, 'lecture-detail': 3, 'quiz-solve': 2 };
+let lastPageId = 'home';
 
 function showPage(pageId) {
     if (!currentUser) {
@@ -241,6 +246,10 @@ function showPage(pageId) {
     if (page) {
         page.style.display = 'block';
         page.classList.add('active');
+        const dp = function(id) { return id in PAGE_DEPTH ? PAGE_DEPTH[id] : 1; };
+        const back = dp(pageId) < dp(lastPageId);
+        page.classList.toggle('slide-b', back);
+        lastPageId = pageId;
     }
     
     document.querySelectorAll('.nav-btn').forEach(b => {
@@ -485,6 +494,7 @@ function updateUIForAuth() {
         adminControls.forEach(el => el.style.display = 'none');
         if (adminNoticeControl) adminNoticeControl.style.display = 'none';
     }
+    renderStudyProgress();
 }
 
 // ==========================================================
@@ -1787,6 +1797,7 @@ function submitQuizAnswers(auto) {
     const area = document.getElementById('quiz-results-area');
     area.innerHTML = head;
     area.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (gradable > 0 && percent >= 80) celebrate(percent);
 
     if (gradable > 0) {
         const gg = gradeOf(score, percent);
@@ -2799,13 +2810,24 @@ function initSplash() {
     if (seen) { sp.remove(); return; }
     try { sessionStorage.setItem('kh_splash', '1'); } catch (e) {}
     const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const stage = sp.querySelector('.spl-stage');
+    if (stage && !reduce) {
+        for (let i = 0; i < 22; i++) {
+            const k = document.createElement('span');
+            k.className = 'spl-spark';
+            const a = Math.random() * Math.PI * 2, d = 90 + Math.random() * 170;
+            k.style.cssText = 'left:calc(50% + ' + Math.round(Math.cos(a) * d) + 'px);top:calc(50% + ' + Math.round(Math.sin(a) * d * 0.8) + 'px);animation-delay:' + (2 + Math.random() * 1.2).toFixed(2) + 's;font-size:' + (8 + Math.random() * 12) + 'px';
+            k.textContent = ['✦', '✧', '✺'][i % 3];
+            stage.appendChild(k);
+        }
+    }
     const done = function() {
-        if (!sp.parentNode) return;
+        if (!sp.parentNode || sp.classList.contains('out')) return;
         sp.classList.add('out');
-        setTimeout(function() { if (sp.parentNode) sp.remove(); }, 700);
+        setTimeout(function() { if (sp.parentNode) sp.remove(); }, reduce ? 400 : 1100);
     };
     sp.addEventListener('click', done);
-    setTimeout(done, reduce ? 600 : 3300);
+    setTimeout(done, reduce ? 600 : 3400);
 }
 initSplash();
 
@@ -3655,6 +3677,8 @@ async function stDelete(id) {
     } catch (e) { alert('تعذر الحذف: ' + (e && e.message ? e.message : e)); }
 }
 
+window.celebrate = celebrate;
+window.renderStudyProgress = renderStudyProgress;
 window.openStories = openStories;
 window.closeStories = closeStories;
 window.stGo = stGo;
@@ -3746,3 +3770,210 @@ if (mediaModalEl) {
     const el = document.getElementById(id);
     if (el) el.addEventListener('keydown', function(e) { if (e.key === 'Enter') handleAuth(); });
 });
+
+// ==========================================================
+//  تأثيرات وزخارف الموقع (حركة عند الضغط والتمرير والتحويم)
+// ==========================================================
+(function siteFx() {
+    const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    // خلفية زخرفية وجزيئات ذهبية
+    if (!reduce) {
+        const bg = document.createElement('div');
+        bg.id = 'fx-bg';
+        const n = window.innerWidth < 600 ? 9 : 16;
+        for (let i = 0; i < n; i++) {
+            const p = document.createElement('span');
+            p.className = 'fx-p';
+            const s = 3 + Math.random() * 5;
+            p.style.cssText = 'left:' + (Math.random() * 100) + '%;width:' + s + 'px;height:' + s + 'px;animation-duration:' + (16 + Math.random() * 18) + 's;animation-delay:' + (-Math.random() * 30) + 's;--sx:' + (Math.round(Math.random() * 80 - 40)) + 'px';
+            bg.appendChild(p);
+        }
+        document.body.insertBefore(bg, document.body.firstChild);
+    }
+
+    // انفجار نجوم زخرفية عند الضغط على أي زرار أو كارت
+    const STARS = ['✦', '✧', '❖', '✺', '◆', '✹'];
+    const CLICKABLE = 'button, a, .path-card, .subject-card, .nav-btn, .contact-card, .st-card, .st-item, .pal-sw, label, .brand-container, .theme-toggle-btn';
+    function burst(x, y) {
+        const ring = document.createElement('div');
+        ring.className = 'fx-ring';
+        ring.style.left = x + 'px'; ring.style.top = y + 'px';
+        document.body.appendChild(ring);
+        setTimeout(function() { ring.remove(); }, 750);
+        const count = 8;
+        for (let i = 0; i < count; i++) {
+            const a = (Math.PI * 2 * i) / count + Math.random() * 0.5;
+            const d = 38 + Math.random() * 38;
+            const s = document.createElement('div');
+            s.className = 'fx-star';
+            s.textContent = STARS[i % STARS.length];
+            s.style.left = x + 'px'; s.style.top = y + 'px';
+            s.style.fontSize = (10 + Math.random() * 10) + 'px';
+            s.style.setProperty('--dx', Math.round(Math.cos(a) * d) + 'px');
+            s.style.setProperty('--dy', Math.round(Math.sin(a) * d) + 'px');
+            document.body.appendChild(s);
+            setTimeout(function() { s.remove(); }, 900);
+        }
+    }
+    if (!reduce) {
+        document.addEventListener('pointerdown', function(e) {
+            if (e.target.closest && e.target.closest(CLICKABLE)) burst(e.clientX, e.clientY);
+        }, { passive: true });
+    }
+
+    // ظهور العناصر تدريجيًا عند التمرير
+    const REVEAL = '.path-card, .subject-card, .stat-box, .contact-card, .acc-card, .paths-section-title, .quote-box, .st-card, .st-item, .badge-item';
+    let io = null;
+    if (!reduce && 'IntersectionObserver' in window) {
+        io = new IntersectionObserver(function(entries) {
+            entries.forEach(function(en) {
+                if (!en.isIntersecting) return;
+                const el = en.target;
+                io.unobserve(el);
+                el.classList.add('rv-in');
+                setTimeout(function() { el.classList.remove('rv', 'rv-in'); el.style.removeProperty('--d'); }, 1100);
+            });
+        }, { threshold: 0.06 });
+    }
+    function watch(el) {
+        if (!io || el.__rv) return;
+        el.__rv = 1;
+        const sib = el.parentNode ? Array.prototype.indexOf.call(el.parentNode.children, el) : 0;
+        el.style.setProperty('--d', (Math.min(sib, 8) * 0.07) + 's');
+        el.classList.add('rv');
+        io.observe(el);
+    }
+    function scan(root) {
+        if (!io || !root || root.nodeType !== 1) return;
+        if (root.matches && root.matches(REVEAL)) watch(root);
+        root.querySelectorAll && root.querySelectorAll(REVEAL).forEach(watch);
+    }
+    if (io) {
+        scan(document.body);
+        new MutationObserver(function(muts) {
+            muts.forEach(function(m) { m.addedNodes.forEach(scan); });
+        }).observe(document.body, { childList: true, subtree: true });
+        // أمان: لو أي عنصر فضل مخفي
+        let t = 0;
+        const guard = setInterval(function() {
+            document.querySelectorAll('.rv:not(.rv-in)').forEach(function(el) {
+                if (el.offsetParent !== null) { const r = el.getBoundingClientRect(); if (r.top < window.innerHeight && r.bottom > 0) { io.unobserve(el); el.classList.add('rv-in'); setTimeout(function() { el.classList.remove('rv', 'rv-in'); }, 1100); } }
+            });
+            if (++t > 12) clearInterval(guard);
+        }, 2500);
+    }
+
+    // عدّاد متحرك للأرقام
+    function countUp(el) {
+        if (el.__w) return;
+        const t = parseInt(String(el.textContent).replace(/[^\d]/g, ''), 10);
+        if (isNaN(t) || t <= 0 || el.__cu === t) return;
+        el.__cu = t;
+        const start = performance.now(), dur = 1000;
+        function write(v) { el.__w = true; el.textContent = v; Promise.resolve().then(function() { el.__w = false; }); }
+        (function step(now) {
+            const p = Math.min(1, (now - start) / dur);
+            write(Math.round(t * (1 - Math.pow(1 - p, 3))));
+            if (p < 1) requestAnimationFrame(step);
+        })(start);
+    }
+    if (!reduce) {
+        document.querySelectorAll('.stat-number').forEach(function(el) {
+            new MutationObserver(function() { countUp(el); }).observe(el, { childList: true, characterData: true, subtree: true });
+        });
+    }
+
+    // ظل الشريط العلوي عند النزول
+    const nav = document.querySelector('.navbar');
+    if (nav) window.addEventListener('scroll', function() { nav.classList.toggle('scrolled', window.scrollY > 16); }, { passive: true });
+})();
+
+
+// ==========================================================
+//  تقدم المذاكرة + احتفال النتيجة + إضاءة الكروت
+// ==========================================================
+function renderStudyProgress() {
+    const box = document.getElementById('study-progress');
+    if (!box) return;
+    if (!currentUser || currentUser.isAdmin || currentUser.isStoryEditor || !lecturesCount) { box.style.display = 'none'; return; }
+    const done = Math.min(getStudied().length, lecturesCount);
+    const pct = Math.round(done / lecturesCount * 100);
+    const C = 2 * Math.PI * 40;
+    const msg = pct === 0 ? 'ابدأ أول محاضرة وسجّلها "تمت مذاكرتها" 💪'
+        : pct < 40 ? 'بداية حلوة، كمّل 🌱'
+        : pct < 75 ? 'ماشي صح، باقي القليل 🔥'
+        : pct < 100 ? 'قربت تخلص، شد حيلك ⭐'
+        : 'خلصت كل المحاضرات! ما شاء الله 🏆';
+    const first = !box.__drawn;
+    box.__drawn = true;
+    box.style.display = 'flex';
+    box.innerHTML =
+        '<div class="pg-ring"><svg viewBox="0 0 100 100"><defs><linearGradient id="pgg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffe2a3"/><stop offset="1" stop-color="#d4903a"/></linearGradient></defs>' +
+        '<circle cx="50" cy="50" r="40" class="pg-bg"/><circle cx="50" cy="50" r="40" class="pg-fg" stroke-dasharray="' + C.toFixed(1) + '" stroke-dashoffset="' + C.toFixed(1) + '"/></svg><b class="pg-num">' + (first ? 0 : pct) + '%</b></div>' +
+        '<div class="pg-info"><h4>تقدمك في المذاكرة</h4><p>ذاكرت <b>' + done + '</b> من <b>' + lecturesCount + '</b> محاضرة</p><small>' + msg + '</small></div>';
+    const fg = box.querySelector('.pg-fg'), num = box.querySelector('.pg-num');
+    requestAnimationFrame(function() { requestAnimationFrame(function() { fg.style.strokeDashoffset = (C * (1 - pct / 100)).toFixed(1); }); });
+    if (first && pct > 0) {
+        const t0 = performance.now();
+        (function step(n) { const p = Math.min(1, (n - t0) / 1200); num.textContent = Math.round(pct * (1 - Math.pow(1 - p, 3))) + '%'; if (p < 1) requestAnimationFrame(step); })(t0);
+    }
+}
+
+function celebrate(percent) {
+    const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const full = percent >= 100;
+    const text = full ? '🏆 درجة كاملة! ما شاء الله' : percent >= 90 ? '🔥 أداء ممتاز! مبروك' : '🎉 مبروك! أداء رائع';
+    const m = document.createElement('div');
+    m.className = 'cele-msg';
+    m.textContent = text;
+    document.body.appendChild(m);
+    setTimeout(function() { m.classList.add('out'); }, 2300);
+    setTimeout(function() { m.remove(); }, 2900);
+    if (reduce) return;
+    const cv = document.createElement('canvas');
+    cv.className = 'cele-canvas';
+    const W = cv.width = window.innerWidth, H = cv.height = window.innerHeight;
+    document.body.appendChild(cv);
+    const ctx = cv.getContext('2d');
+    const COL = ['#f0bd68', '#ffe2a3', '#ffffff', '#b57bff', '#ff8fb1', '#d4903a'];
+    const n = full ? 220 : 150;
+    const ps = [];
+    for (let i = 0; i < n; i++) {
+        const fromLeft = i % 2 === 0;
+        ps.push({
+            x: fromLeft ? -10 : W + 10, y: H * (0.55 + Math.random() * 0.3),
+            vx: (fromLeft ? 1 : -1) * (4 + Math.random() * 9), vy: -(9 + Math.random() * 13),
+            s: 5 + Math.random() * 7, r: Math.random() * 6.28, vr: (Math.random() - 0.5) * 0.4,
+            c: COL[i % COL.length], k: i % 4
+        });
+    }
+    const t0 = performance.now();
+    (function frame(now) {
+        const t = now - t0;
+        ctx.clearRect(0, 0, W, H);
+        ps.forEach(function(p) {
+            p.vy += 0.34; p.vx *= 0.992; p.x += p.vx; p.y += p.vy; p.r += p.vr;
+            ctx.save();
+            ctx.globalAlpha = Math.max(0, 1 - Math.max(0, t - 2200) / 1000);
+            ctx.translate(p.x, p.y); ctx.rotate(p.r); ctx.fillStyle = p.c;
+            if (p.k === 0) { ctx.fillRect(-p.s / 2, -p.s / 4, p.s, p.s / 2); }
+            else if (p.k === 1) { ctx.beginPath(); ctx.arc(0, 0, p.s / 2.4, 0, 6.28); ctx.fill(); }
+            else { ctx.beginPath(); for (let j = 0; j < 4; j++) { ctx.lineTo(Math.cos(j * 1.5708) * p.s, Math.sin(j * 1.5708) * p.s); ctx.lineTo(Math.cos(j * 1.5708 + 0.785) * p.s * 0.28, Math.sin(j * 1.5708 + 0.785) * p.s * 0.28); } ctx.closePath(); ctx.fill(); }
+            ctx.restore();
+        });
+        if (t < 3300) requestAnimationFrame(frame); else cv.remove();
+    })(t0);
+}
+
+// إضاءة ذهبية بتتبع الماوس على الكروت (للكمبيوتر)
+document.addEventListener('pointermove', function(e) {
+    if (e.pointerType !== 'mouse' || !e.target.closest) return;
+    const c = e.target.closest('.path-card, .subject-card, .contact-card, .acc-card, .stat-box');
+    if (!c) return;
+    let sp = c.querySelector(':scope > .spot');
+    if (!sp) { sp = document.createElement('span'); sp.className = 'spot'; c.appendChild(sp); }
+    const r = c.getBoundingClientRect();
+    sp.style.setProperty('--mx', (e.clientX - r.left) + 'px');
+    sp.style.setProperty('--my', (e.clientY - r.top) + 'px');
+}, { passive: true });
